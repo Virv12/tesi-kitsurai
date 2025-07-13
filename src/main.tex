@@ -1,0 +1,109 @@
+\documentclass[a4paper, 12pt]{article}
+
+\usepackage{lipsum}         % Lorem Ipsum
+\usepackage[                % Geometry
+    a4paper,
+%    twoside
+]{geometry}
+%\usepackage[utf8]{inputenc} % Input e Font
+\usepackage[italian]{babel}
+\usepackage{fontspec}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}      % Better Paragraphs
+\usepackage{setspace}
+\usepackage{fancyhdr}       % Header and Title
+\usepackage{titlesec}
+\usepackage{amssymb}        % Maths
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{upgreek}
+\usepackage{enumitem}       % Lists
+\usepackage{siunitx}        % Units
+\usepackage{array}          % Tables
+\usepackage{tabularx}
+\usepackage{xltabular}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{calc}           % Generic computation (used in tables)
+\usepackage{xcolor}         % Colors
+\usepackage{graphicx}       % Images
+\usepackage{rotating}
+\usepackage{float}
+\usepackage{caption}
+%\usepackage{subcaption}
+\usepackage[                % Citations
+    backend=biber,
+    style=numeric,
+    sorting=nyt,
+]{biblatex}
+\usepackage{csquotes}
+\usepackage[                % Links
+    colorlinks,
+    linkcolor=black,
+    urlcolor=black,
+    citecolor=black,
+    pdftitle={Tesi Triennale},
+    pdfpagemode=FullScreen,
+]{hyperref}
+\usepackage{xurl}
+%\usepackage{listings}       %% Code?
+\usepackage[                % Code Syntax Highlithing
+    outputdir=../out
+]{minted}
+\usepackage[                % Misc?
+    bottom
+]{footmisc}
+\usepackage[
+    normalem
+]{ulem}
+\usepackage{wasysym}
+
+%%% Initalization
+% Captions
+\captionsetup[figure]{format=hang}
+
+% Maths
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+
+% List spacing
+\setlist[itemize]{itemsep=0.1\itemsep}
+\setlist[enumerate]{itemsep=0.1\itemsep}
+
+% Monospace font (with ligatures)
+\setmonofont{JetBrains Mono}[
+    Scale=MatchLowercase,
+    Contextuals=Alternate,
+]
+
+\definecolor{lightergray}{rgb}{0.95, 0.95, 0.95}
+
+%%% Document
+\title{kitsurai: Un key-value store real-time distribuito in rust}
+\author{Filippo Casarin}
+\date{23 luglio 2025}
+
+\addbibresource{sources.bib}
+\nocite{*}
+
+\begin{document}
+    \include{00-frontespizio/main}
+%    \newpage\shipout\null % Blank page
+%    \clearpage
+
+    \include{abstract}
+    \pagebreak
+
+    \raggedbottom\tableofcontents
+    \pagebreak
+
+    \include{01-introduzione/main}
+    \include{02-architettura/main}
+    %\include{03-deficit/main}
+    %\include{04-conclusioni/main}
+    %\include{05-ringraziamenti/main}
+
+    \phantomsection
+    \addcontentsline{toc}{section}{Bibliografia}
+    \printbibliography[title={Bibliografia}]
+\end{document}

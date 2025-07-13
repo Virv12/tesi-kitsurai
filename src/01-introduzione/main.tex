@@ -1,0 +1,26 @@
+\section{Introduzione}
+\label{sec:introduzione}
+
+%- motivazioni:
+%  - importance of replicated storage services in Cloud Computing
+%    ==> reliability
+%  - increasing trend in using NoSQL storage solutions
+%    => lower overheads & better scalability w.r.t. traditional SQL DBs
+%       (much simpler operations)
+%  - increasing importance of data access latency in emerging use-cases,
+%    witnessed by DynamoDB ("single-digit millisecond latency"),
+%    BigTable
+%- providing guarantees in distributed, multi-tenant is difficult
+%  => open-source? MongoDB, Cassandra -> best effort, no latency guarantees
+%- emerging trend in adopting new languages like Go, Rust, ...
+%  Rust interesting for safety, performance, ... ...???
+%
+%- first attempt at realizing a replicated key-value store with guaranteed
+%  per-client/per-table performance, in the Rust programming language.
+
+Negli ultimi anni, i servizi di storage replicato nel campo del Cloud Computing hanno acquisito molta importanza: garantire high-availability, fault-tolerance e consistenza dei dati è infatti fondamentale nel mercato moderno.
+Sempre più frequentemente, le architetture moderne si affidano a soluzioni NoSQL, che, in cambio di operazioni più semplificate, offrono overhead inferiori e migliore scalabilità rispetto ai tradizionali database SQL.
+Un altro aspetto sempre più imporatante è la latenza nell'accesso ai dati come osservato su piattaforme come DynamoDB che garantiscono tempi di risposta nell'ordine dei millisecondi.
+Tuttavia, fornire garanzie di latenza e prestazioni in ambienti distribuiti e multi-tenant si rivela estremamente complesso. Le principali soluzioni open‑source come MongoDB o Cassandra adottano un approccio di tipo best effort, senza garantire limiti precisi sulla latenza o throughput, soprattutto quando più client condividono le risorse.
+Il progetto Kitsurai si propone come primo tentativo di realizzare un key-value store distrubuito, in grado di offrire garanzie di throughput in un contesto multi-tenant. 
+Il progetto è stato sviluppato in Rust per sfruttare le caratteristiche di sicurezza e prestazioni offerte dal linguaggio, e si propone di essere un'alternativa open-source alle soluzioni proprietarie come DynamoDB o BigTable.
