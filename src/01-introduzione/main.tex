@@ -18,9 +18,17 @@
 %- first attempt at realizing a replicated key-value store with guaranteed
 %  per-client/per-table performance, in the Rust programming language.
 
-Negli ultimi anni, i servizi di storage replicato nel campo del Cloud Computing hanno acquisito molta importanza: garantire high-availability, fault-tolerance e consistenza dei dati è infatti fondamentale nel mercato moderno.
-Sempre più frequentemente, le architetture moderne si affidano a soluzioni NoSQL, che, in cambio di operazioni più semplificate, offrono overhead inferiori e migliore scalabilità rispetto ai tradizionali database SQL.
-Un altro aspetto sempre più imporatante è la latenza nell'accesso ai dati come osservato su piattaforme come DynamoDB che garantiscono tempi di risposta nell'ordine dei millisecondi.
-Tuttavia, fornire garanzie di latenza e prestazioni in ambienti distribuiti e multi-tenant si rivela estremamente complesso. Le principali soluzioni open‑source come MongoDB o Cassandra adottano un approccio di tipo best effort, senza garantire limiti precisi sulla latenza o throughput, soprattutto quando più client condividono le risorse.
-Il progetto Kitsurai si propone come primo tentativo di realizzare un key-value store distrubuito, in grado di offrire garanzie di throughput in un contesto multi-tenant. 
-Il progetto è stato sviluppato in Rust per sfruttare le caratteristiche di sicurezza e prestazioni offerte dal linguaggio, e si propone di essere un'alternativa open-source alle soluzioni proprietarie come DynamoDB o BigTable.
+Negli ultimi anni, i servizi di storage replicato nel campo del Cloud Computing hanno acquisito notevole importanza. 
+In un contesto in cui le applicazioni devono servire milioni di utenti contemporaneamente, spesso distribuiti geograficamente, diventa cruciale progettare sistemi in grado di garantire scalabilità orizzontale, alta disponibilità e tolleranza ai guasti.
+Tali proprietà devono coesistere con l'esigenza di mantenere bassi tempi di risposta e garantire una gestione efficiente delle risorse.
+I sistemi di gestione dati tradizionali, basati su modelli relazionali, risultano spesso inadatti a questi nuovi scenari distribuiti.
+Per questo motivo, sempre più frequentemente, le architetture moderne si affidano a soluzioni NoSQL che, in cambio di operazioni più semplificate, offrono un overhead inferiore e una migliore scalabilità rispetto ai tradizionali database SQL.
+Un altro aspetto di crescente importanza è la latenza nell'accesso ai dati, come osservato su piattaforme come DynamoDB, che garantiscono tempi di risposta dell'ordine dei millisecondi.
+Tuttavia, fornire garanzie di latenza e prestazioni in ambienti distribuiti e multi-tenant si rivela estremamente complesso.
+Le principali soluzioni open-source, come MongoDB o Cassandra, adottano un approccio di tipo best effort, senza garantire limiti precisi sulla latenza o sul throughput, soprattutto quando più client condividono le risorse.
+Il modello multi-tenant, in cui più clienti condividono le stesse risorse fisiche o virtuali, introduce ulteriori sfide nella gestione del carico e nella garanzia di prestazioni minime.
+In assenza di meccanismi espliciti di isolamento, un tenant particolarmente attivo può compromettere la qualità del servizio offerto agli altri, rendendo essenziale un controllo preciso del throughput per ciascun cliente.
+Il progetto Kitsurai si propone come primo tentativo di realizzare un key-value store che non solo sia scalabile e resiliente, ma che introduca anche meccanismi espliciti di controllo delle risorse, al fine di garantire un throughput minimo a ciascun tenant, anche in condizioni di carico elevato.
+Il progetto è stato sviluppato in Rust, linguaggio scelto non solo per le sue eccellenti prestazioni, ma anche per il modello di sicurezza della memoria che offre.
+Rust è noto per fornire performance comparabili a quelle del C++, evitando però classi comuni di errori come race condition o memory leak, rendendolo particolarmente adatto alla programmazione di sistemi distribuiti complessi.
+Nei capitoli che seguono verranno analizzate nel dettaglio le scelte progettuali, l’architettura del sistema e i risultati ottenuti attraverso test empirici, con particolare attenzione alle garanzie di throughput e latenza per i client.

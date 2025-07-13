@@ -1,9 +1,8 @@
 \section{Architettura}
 \label{sec:architettura}
 
-Un sistema Kitsurai opera su un cluster, questo è composto da un insieme statico di nodi che possono essere momentaneamente non disponibili.
-Il sistema organizza i dati in tabelle, ogni tabella è identificata da un UUIDv7.
-Ogni tabella contiene coppie chiave-valore, dove sia le chiavi che i valori sono array di byte.
+Un sistema Kitsurai opera su un cluster, composto da un insieme statico di nodi, i quali possono risultare temporaneamente non disponibili.
+Il sistema organizza i dati in tabelle, ognuna identificata da un UUIDv7. Ogni tabella contiene coppie chiave-valore, dove sia le chiavi che i valori sono array di byte.
 
 \subsection{Interfaccia}
 \label{subsec:interfaccia}
@@ -11,7 +10,7 @@ Ogni tabella contiene coppie chiave-valore, dove sia le chiavi che i valori sono
 Sono supportate quattro operazioni principali:
 \begin{itemize}
     \item \texttt{create-table}: crea una nuova tabella con i parametri specificati.
-    \item \texttt{delete-table}: crea una nuova tabella con i parametri specificati.
+    \item \texttt{delete-table}: cancella una tabella esistente.
     \item \texttt{get}: recupera il valore associato a una chiave in una tabella.
     \item \texttt{set}: imposta il valore associato a una chiave in una tabella.
 \end{itemize}
@@ -19,63 +18,56 @@ Sono supportate quattro operazioni principali:
 \subsection{Tabelle}
 \label{subsec:tabelle}
 
-Ogni tabella ha quattro parametri decisi dall'utente al momento della creazione:
+Ogni tabella ha quattro parametri, specificati dall'utente al momento della creazione:
 \begin{itemize}
     \item \texttt{bandwidth} o \texttt{b}: il numero di richieste al secondo che il sistema deve garantire per la tabella.
     \item \texttt{n}: il fattore di replicazione per ogni coppia chiave-valore.
-    \item \texttt{r}: il numero minimo di nodi che devono rispondere a una richiesta di lettura.
-    \item \texttt{w}: il numero minimo di nodi che devono rispondere a una richiesta di scrittura.
+    \item \texttt{r}: il \texttt{read-concern}, ovvero il numero minimo di nodi che devono rispondere con successo a una richiesta di lettura.
+    \item \texttt{w}: il \texttt{write-concern}, ovvero il numero minimo di nodi che devono rispondere con successo a una richiesta di scrittura.
 \end{itemize}
 
-Ogni tabella è gestita da un insieme di nodi, chiamati \texttt{nodi responsabili}, che sono scelti in modo da garantire la replicazione e la disponibilità dei dati.
-In ogni nodo ogni tabella può essere in uno di tre stati: preparata, creata o cancellata.
-Le tabelle possono solo \textit{crescere} di stato, nell'ordine: preparata $\rightarrow$ creata $\rightarrow$ cancellata.
-La tabella si considera creata quando tutti i \texttt{nodi responsabili} la considerano come creata,
-mentre si considera cancellata quando almeno un nodo la considera cancellata.
-Lo stato di una tabella è sincronizzato tra i nodi tramite il protocollo di \textit{Gossip} (vedi sezione~\ref{subsec:gossip}).
+Ogni tabella è gestita da un insieme di nodi, chiamati \texttt{nodi responsabili}, scelti in modo da garantire la replicazione e la disponibilità dei dati.
+In ogni nodo, una tabella può trovarsi in uno dei tre stati: preparata, creata o cancellata.
+Le tabelle possono solo progredire di stato, nell'ordine: preparata $\rightarrow$ creata $\rightarrow$ cancellata.
+Una tabella si considera creata quando tutti i \texttt{nodi responsabili} la considerano tale; si considera cancellata quando almeno un nodo la contrassegna come tale.
+Lo stato di una tabella viene sincronizzato tra i nodi tramite il protocollo di Gossip (vedi sezione~\ref{subsec:gossip}).
 
 \subsubsection{Creazione e Cancellazione}
 \label{subsubsec:creazione-cancellazione}
 
-Per creare una tabella si svolgono i seguenti passaggi:
+Per creare una tabella, si seguono i seguenti passaggi:
 \begin{enumerate}
-    \item il client si connette a un nodo a sua scelta, che chiameremo \texttt{router}, e invia i parametri \texttt{b}, \texttt{n}, \texttt{r} e \texttt{w} della tabella;
-    \item il \texttt{router} genera un UUID per la tabella e calcola la banda effettiva `B = b * n` per tenere conto della replicazione;
-    \item il \texttt{router} chiede agli altri nodi la banda disponibile per la nuova tabella, 
-        facendo attenzione a non allocare più di `b` su un singolo nodo, 
-        garantendo così che la tabella sarà effettivamente replicata `n` volte;
-    \item una volta che il \texttt{router} ha recuperato abbastanza banda (`>= B`), 
-        definisce l'elenco dei \texttt{nodi responsabili} per la memorizzazione della tabella e le loro quote effettive;
-    \item il \texttt{router} chiede ai \texttt{nodi responsabili} di \texttt{commit}-are la tabella;
-    \item se tutti i nodi hanno \texttt{commit}-ato la tabella, la creazione ha avuto successo e il \texttt{router} restituisce l'UUID della nuova tabella al client.
+    \item Il client si connette a un nodo a sua scelta (detto \texttt{router}) e invia i parametri \texttt{b}, \texttt{n}, \texttt{r} e \texttt{w} della tabella.
+    \item Il \texttt{router} genera un UUID per la tabella e calcola la banda effettiva $B = b \cdot n$, per tenere conto della replicazione.
+    \item Il \texttt{router} richiede agli altri nodi la banda disponibile per la nuova tabella, evitando di allocare più di \texttt{b} su un singolo nodo, garantendo così che la tabella venga replicata esattamente \texttt{n} volte.
+    \item Una volta ottenuta sufficiente banda (almeno $B$), il \texttt{router} definisce l'elenco dei \texttt{nodi responsabili} e le rispettive quote.
+    \item Il \texttt{router} richiede ai \texttt{nodi responsabili} di eseguire il \texttt{commit} della tabella.
+    \item Se tutti i nodi effettuano il \texttt{commit}, la creazione ha successo e il \texttt{router} restituisce al client l'UUID della nuova tabella.
 \end{enumerate}
 
-%Step 3 is called the _preparation_ step while step 5 is called the _commit_ step.
+%Lo step 3 è detto preparazione, mentre lo step 5 è detto commit.
 
-Se un nodo riceve una richiesta di preparazione per una nuova tabella, ma non riceve un \texttt{commit} entro un timeout segnerà la tabella come cancellata.
-Questo garantisce che in caso di errori imprevisti durante la creazione della tabella non rimanga in uno stato indefinito che porta a perdere la banda allocata.
+Se un nodo riceve una richiesta di preparazione per una nuova tabella, ma non riceve un \texttt{commit} entro un certo timeout, segnerà la tabella come cancellata.
+Questo garantisce che, in caso di errori durante la creazione, la tabella non rimanga in uno stato indefinito che comporterebbe perdita di banda allocata.
 
-Per cancellare una tabella, il client invia una richiesta di cancellazione al \texttt{router}, che a sua volta chiede ai \texttt{nodi responsabili} di cancellare la tabella.
-
-It follows that marking a table as deleted on one node 
- is enough to (eventually) delete the table in the entire cluster.
+Per cancellare una tabella, è sufficiente che un nodo la contrassegni come cancellata; successivamente, grazie al protocollo di Gossip (vedi sezione~\ref{subsec:gossip}), gli altri nodi si sincronizzeranno e la tabella sarà considerata cancellata da tutti.
 
 \subsubsection{Metadati}
 \label{subsubsec:metadati}
 
-Il database continene una tabella speciale non accessibile dagli utenti, identificata dallo UUIDv8 generato dai byte \texttt{kitsuraimetadata}.
-Questa tabella contiene i metadati di tutte le tabelle create nel cluster, inclusi i loro parametri e i \texttt{nodi responsabili}.
-Questo permette ad ogni nodo di comportarsi come \texttt{router} nelle richieste di \texttt{get} e \texttt{set}.
-La tabella dei metadati, identificata da UUIDv8, non può avere conflitti con gli UUIDv7 generati per le tabelle degli utenti.
+Il database contiene una tabella speciale, non accessibile dagli utenti, identificata da uno UUIDv8 generato dai byte \texttt{kitsuraimetadata}.
+Questa tabella contiene i metadati di tutte le tabelle create nel cluster, inclusi i relativi parametri e i \texttt{nodi responsabili}.
+Grazie a ciò, ogni nodo può comportarsi come \texttt{router} nelle richieste di \texttt{get} e \texttt{set}.
+La tabella dei metadati, identificata da uno UUIDv8, non può entrare in conflitto con gli UUIDv7 generati per le tabelle degli utenti.
 
 \subsection{Gossip}
 \label{subsec:gossip}
 
 Ogni nodo del cluster avvia uno scambio di gossip con un peer scelto casualmente ogni secondo.
-Durante il gossip i due nodi sincronizzano tra loro i metadati delle tabelle create e cancellate, ma non quelle in preparazione.
-L'utilizzo di un merkle tree permette ai nodi di trovare rapidamente quali tabelle sono diverse e di sincronizzarsi solo su quelle.
+Durante lo scambio, i due nodi sincronizzano i metadati delle tabelle create e cancellate, ma non di quelle in preparazione.
+L'utilizzo di un Merkle tree consente ai nodi di identificare rapidamente le tabelle divergenti e sincronizzarsi solo su quelle.
 Se il peer non è disponibile, lo scambio fallisce.
-Il gossip permette al sistema di raggiungere la coerenza dei metadati tra i nodi anche in caso di nodi offline o di errori di rete.
+Il gossip permette al sistema di raggiungere la coerenza dei metadati tra i nodi anche in presenza di nodi offline o errori di rete.
 
 \subsection{Coppie Chiave-Valore}
 \label{subsec:coppie-chiave-valore}
