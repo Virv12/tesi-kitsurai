@@ -1,0 +1,24 @@
+\section{Conclusioni}
+\label{sec:conclusioni}
+
+%Conclusions
+%- works? really works?
+%- limitations
+%  => access control model
+%  => table names?
+%  => read conflicts? (lack of a catch-up protocol)
+
+\subsection{Limitazioni}
+\label{subsec:limitazioni}
+
+Il progetto, pur dimostrando la validità dell'approccio proposto, presenta alcune limitazioni che richiedono ulteriori sviluppi. In particolare, l'implementazione attuale non prevede:
+
+\begin{itemize}
+    \item Un modello di controllo degli accessi per la gestione dei permessi.
+    \item Un protocollo di catch-up per il reintegro dei nodi dopo un'interruzione.
+    \item Meccanismi efficaci per la risoluzione dei conflitti in fase di lettura.
+    \item L'indentificazione delle tabelle tramite nomi scelti dall'utente.
+    \item Il supporto a macchine dotate di più dischi eterogenei.
+    \item Strategie per la gestione ottimale della capacità dei nodi, soprattutto in scenari in cui le tabelle presentano requisiti sbilanciati in termini di banda e spazio di archiviazione.
+    \item Il supporto per l'aggiunta e la rimozione dinamica dei nodi dal sistema.
+\end{itemize}

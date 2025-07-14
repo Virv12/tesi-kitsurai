@@ -38,9 +38,9 @@ Lo stato di una tabella viene sincronizzato tra i nodi tramite il protocollo di 
 Per creare una tabella, si seguono i seguenti passaggi:
 \begin{enumerate}
     \item Il client si connette a un nodo a sua scelta (detto \texttt{router}) e invia i parametri \texttt{b}, \texttt{n}, \texttt{r} e \texttt{w} della tabella.
-    \item Il \texttt{router} genera un UUID per la tabella e calcola la banda effettiva $B = b \cdot n$, per tenere conto della replicazione.
+    \item Il \texttt{router} genera un UUID per la tabella e calcola la banda effettiva $\Sigma = b \cdot n$, per tenere conto della replicazione.
     \item Il \texttt{router} richiede agli altri nodi la banda disponibile per la nuova tabella, evitando di allocare più di \texttt{b} su un singolo nodo, garantendo così che la tabella venga replicata esattamente \texttt{n} volte.
-    \item Una volta ottenuta sufficiente banda (almeno $B$), il \texttt{router} definisce l'elenco dei \texttt{nodi responsabili} e le rispettive quote.
+    \item Una volta ottenuta sufficiente banda (almeno $\Sigma$), il \texttt{router} definisce l'elenco dei \texttt{nodi responsabili} e le rispettive quote.
     \item Il \texttt{router} richiede ai \texttt{nodi responsabili} di eseguire il \texttt{commit} della tabella.
     \item Se tutti i nodi effettuano il \texttt{commit}, la creazione ha successo e il \texttt{router} restituisce al client l'UUID della nuova tabella.
 \end{enumerate}
@@ -69,48 +69,92 @@ L'utilizzo di un Merkle tree consente ai nodi di identificare rapidamente le tab
 Se il peer non è disponibile, lo scambio fallisce.
 Il gossip permette al sistema di raggiungere la coerenza dei metadati tra i nodi anche in presenza di nodi offline o errori di rete.
 
-\subsection{Coppie Chiave-Valore}
-\label{subsec:coppie-chiave-valore}
+\subsection{Anello di replicazione}
+\label{subsec:anello-replicazione}
 
-Ogni chiave della tabella è assegnata a \texttt{n} nodi tra quelli responsabili della tabella stessa, rispettando il rapporto di banda allocata sui nodi.
-Per fare ciò, definiamo $b_i$ come la banda del nodo $i$ e $\Sigma$ come la banda totale allocata.
-Definiamo un anello di dimensione $\Sigma$ e per ogni posizione nell'anello assegniamo un nodo $i$ in modo che:
+Per garantire la disponibilità del database, vogliamo che ogni chiave sia replicata su più nodi rispettando i seguenti requisiti:
+
 \begin{itemize}
-    \item ogni finestra di lunghezza $n$ nell'anello contenga nodi distinti;
-    \item ogni nodo $i$ sia assegnato a $b_i$ posizioni nell'anello.
+    \item Ogni chiave è replicata su \texttt{n} nodi distinti tra quelli responsabili della tabella, per garantire la disponibilità dei dati anche in caso di guasti a uno o più nodi.
+    \item Ogni nodo $i$ ha una banda allocata proporzionale alla sua capacità, per garantire la distribuzione equa del carico tra i nodi, essendo ogni chiave replicata su \texttt{n} nodi distinti abbiamo che ogni nodo tiene $n \cdot \frac{b_i}{\Sigma} = \frac{b_i}{b}$ del totale delle chiavi, dove $b$ è la banda minima garantita per la tabella.
 \end{itemize}
 
-Data una chiave, calcoliamo il suo hash (utilizzando XXH3\footnote{https://xxhash.com}, un algoritmo di hash veloce non crittografico) e troviamo la posizione nell'anello.
-La chiave viene assegnata ai \texttt{n} nodi a destra della posizione della chiave nell'anello.
+Per soddisfare questi requisiti, definiamo l'anello di replicazione come un array circolare di dimensione $\Sigma$.
+Per ogni posizione nell'anello, assegniamo un nodo $i$ in modo tale che:
+
+\begin{itemize}
+    \item Ogni intervallo di lunghezza $n$ nell'anello contenga nodi distinti.
+    \item Ogni nodo $i$ occupi esattamente $b_i$ posizioni nell'anello.
+\end{itemize}
+
+Data una chiave, calcoliamo il suo hash (utilizzando XXH3\footnote{\url{https://xxhash.com}}, un algoritmo di hash veloce e non crittografico) e troviamo la posizione corrispondente nell'anello.
+La chiave viene assegnata ai \texttt{n} nodi immediatamente successivi alla posizione calcolata.
+Se le proprietà dell'anello sono rispettate, anche i requisiti di disponibilità e bilanciamento della banda sono garantiti.
+
+\subsubsection{Costruzione esplicita}
+\label{subsubsec:costruzione-esplicita}
 
 I nodi sono assegnati all'anello in modo iterativo, partendo dal primo nodo.
-Ogni nodo viene assegnato a $b_i$ posizioni, partendo dall'ultima assegnata e prendendo uno slot ogni $n$-esima posizione.
-Se lo slot è già occupato da un altro nodo, si salta e si prende il successivo.
+Ogni nodo è assegnato a $b_i$ posizioni, proseguendo dall'ultima posizione assegnata al nodo precedente (o da una posizione qualsiasi, se è il primo nodo), e occupando uno slot ogni $n$ posizioni.
+Se lo slot è già occupato da un altro nodo, si salta al successivo.
+È possibile verificare che questa costruzione rispetta le proprietà sopra descritte.
 
-Poiché la banda allocata può essere considerevolmente alta, la costruzione di un anello che soddisfi i criteri sopra descritti può essere costosa.
-Questa costruzione può essere evitata utilizzando una formula per trovare quale nodo è assegnato a una data posizione nell'anello, come descritto in \texttt{virt\_to\_peer} (vedi \url{https://virv12.github.io/kitsurai/ktd/state/struct.TableData.html#method.virt_to_peer}).
+\subsubsection{Costruzione implicita}
+\label{subsubsec:costruzione-implicita}
+
+Poiché la banda allocata può essere considerevolmente elevata, la costruzione esplicita di un anello conforme ai criteri potrebbe risultare costosa.
+Per evitarla, è possibile usare un algoritmo che calcola direttamente il nodo assegnato a una posizione $i$ nell'anello:
+
+\begin{enumerate}
+    \item Precalcoliamo i prefissi: $c_{i+1} = c_i + b_i$, con $c_0 = 0$.
+    \item Calcoliamo $j = \left\lfloor \frac{i}{n} \right\rfloor + (i \bmod n) \cdot b$.
+    \item Troviamo il nodo $x$ tale che $c_x \leq j < c_{x+1}$ (usando eventualmente una ricerca binaria).
+\end{enumerate}
+
+Questa formula assegna i nodi nello stesso ordine della costruzione esplicita, richiedendo memoria lineare e tempo logaritmico rispetto al numero di nodi responsabili.
+
+\subsubsection{Condizioni di esistenza}
+\label{subsubsec:esistenza}
+
+Come mostrato, se ogni nodo soddisfa la condizione $b_i \leq b$ (come garantito durante la creazione della tabella), allora l'anello di replicazione esiste e può essere costruito.
+Tuttavia, se queste condizioni non sono rispettate, l'anello non può esistere: non è possibile assegnare le chiavi in modo che rispettino simultaneamente le condizioni di replica e di banda.
+Per contraddizione, se un nodo $k$ ha banda $b_k > b$, allora questo nodo conterrà $\frac{b_k}{b} > 1$ del totale delle chiavi, il che è assurdo.
+
+Questo mostra che le condizioni imposte durante la creazione della tabella sono sufficienti e necessarie per il funzionamento del sistema.
+
+\subsection{Operazioni \texttt{get} e \texttt{set}}
+\label{subsec:get-set}
 
 Per leggere o scrivere una chiave, si seguono i seguenti passaggi:
 \begin{enumerate}
     \item Il client si connette a un nodo a sua scelta (detto \texttt{router}) e invia la chiave e il valore (se si tratta di una scrittura).
-    \item Il \texttt{router} calcola l'hash della chiave e determina i \texttt{n} nodi responsabili per quella chiave.
+    \item Il \texttt{router} calcola l'hash della chiave e determina gli \texttt{n} nodi responsabili per quella chiave.
     \item Il \texttt{router} invia la richiesta di lettura o scrittura ai nodi responsabili.
     \item I nodi rispondono con il valore richiesto o confermano la scrittura.
-    \item Il \texttt{router} aggrega le risposte e restituisce al client i primi $r$ (o $w$) risultati disponibili.
+    \item Il \texttt{router} aggrega le risposte e restituisce al client i primi \texttt{r} (o \texttt{w}) risultati disponibili.
 \end{enumerate}
 
-Se meno di $r$ (o $w$) nodi rispondono con successo, l'operazione fallisce e il client riceve un errore.
+Se meno di \texttt{r} (o \texttt{w}) nodi rispondono con successo, l'operazione fallisce e il client riceve un errore.
 
-\subsubsection{Availability Zones}
-\label{subsubsec:availability-zones}
+\subsection{Availability Zones}
+\label{subsec:availability-zones}
 
 Per garantire la disponibilità del database, ogni nodo può essere etichettato con una stringa che identifica la sua Availability Zone (\texttt{AZ}).
 Due nodi appartenenti alla stessa \texttt{AZ} non possono essere scelti per replicare la stessa chiave.
-Per garantire che le chiavi siano replicate in modo da essere disponibili anche in caso di guasti a un'intera \texttt{AZ}, andiamo a cambiare l'algoritmo di allocazione delle chiavi:
+Per garantire che le chiavi siano replicate in modo da essere disponibili anche in caso di guasti a un'intera \texttt{AZ}, andiamo a cambiare l'algoritmo di distribuzione delle chiavi:
 \begin{itemize}
     \item durante la creazione della tabella il \texttt{router} non deve prendere più di \texttt{b} banda da nodi nella stessa \texttt{AZ};
     \item i nodi devono essere assegnati all'anello in ordine di \texttt{AZ}.
 \end{itemize}
+
+\subsection{Limitazione del Throughput}
+\label{subsec:limitazione-throughput}
+
+In un sistema multi-tenant come Kitsurai, è necessario evitare che un singolo client monopolizzi le risorse e comprometta le prestazioni degli altri.
+Per questo motivo, Kitsurai implementa un meccanismo di limitazione del throughput che garantisce a ogni client la banda richiesta al momento della creazione della tabella, anche in presenza di carichi elevati e concorrenti.
+Ogni nodo del cluster mantiene, per ciascuna tabella, una variabile \texttt{sched\_at} che indica il momento in cui il nodo sarà nuovamente disponibile per eseguire nuove operazioni su quella tabella.
+Quando un client invia una richiesta di lettura o scrittura, il nodo attende fino al tempo indicato da \texttt{sched\_at} prima di eseguire l'operazione, quindi incrementa \texttt{sched\_at} di un intervallo pari a $\frac{1}{b}$, dove $b$ rappresenta la banda richiesta per la tabella.
+Se \texttt{sched\_at} è già passato, il sistema permetterebbe di eseguire operazioni in modo incontrollato finché \texttt{sched\_at} non raggiunge il tempo corrente; per questo motivo, se \texttt{sched\_at} è già passato, viene aggiornato a 100 ms prima del tempo corrente, permettendo così un breve burst controllato di operazioni.
 
 \subsection{Remote Procedure Calls}
 \label{subsec:rpc}
@@ -120,18 +164,9 @@ Una richiesta RPC si svolge nel seguente modo:
 \begin{enumerate}
     \item $A$ apre una connessione TCP a $B$.
     \item $A$ invia la richiesta RPC serializzata.
-    \item $A$ chiude il suo stream TCP (inviando un pacchetto `FIN` a $B$).
+    \item $A$ chiude il suo stream TCP (inviando un pacchetto \texttt{FIN} a $B$).
     \item $B$ attende di ricevere tutti i dati disponibili.
     \item $B$ deserializza ed esegue la richiesta RPC.
     \item $B$ invia la risposta RPC serializzata e chiude la connessione.
     \item $A$ attende di ricevere tutti i dati della risposta e restituisce il valore al chiamante.
 \end{enumerate}
-
-\subsection{Limitazione del Throughput}
-\label{subsec:limitazione-throughput}
-
-In un sistema multi-tenant come Kitsurai è necessario evitare che un singolo client monopolizzi le risorse e comprometta le prestazioni degli altri.
-Per questo motivo, Kitsurai implementa un meccanismo di limitazione del throughput che garantisce a ogni client la banda richiesta al momento della creazione della tabella, anche in presenza di carichi elevati e concorrenti.
-Ogni nodo del cluster mantiene, per ciascuna tabella, una variabile \texttt{sched\_at} che indica il momento in cui il nodo sarà disponibile per eseguire nuove operazioni su quella tabella.
-Quando un client invia una richiesta di lettura o scrittura, il nodo attende fino al tempo \texttt{sched\_at} prima di eseguire l'operazione, quindi incrementa \texttt{sched\_at} di un intervallo pari a $\frac{1}{b}$, dove $b$ è la banda richiesta per la tabella.
-
