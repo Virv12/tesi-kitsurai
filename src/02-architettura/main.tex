@@ -72,83 +72,66 @@ Il gossip permette al sistema di raggiungere la coerenza dei metadati tra i nodi
 \subsection{Coppie Chiave-Valore}
 \label{subsec:coppie-chiave-valore}
 
-Each key in a table is assigned to `n` nodes from those responsible for the table,
-respecting the ratio of allocated bandwidth on the nodes.
+Ogni chiave della tabella è assegnata a \texttt{n} nodi tra quelli responsabili della tabella stessa, rispettando il rapporto di banda allocata sui nodi.
+Per fare ciò, definiamo $b_i$ come la banda del nodo $i$ e $\Sigma$ come la banda totale allocata.
+Definiamo un anello di dimensione $\Sigma$ e per ogni posizione nell'anello assegniamo un nodo $i$ in modo che:
+\begin{itemize}
+    \item ogni finestra di lunghezza $n$ nell'anello contenga nodi distinti;
+    \item ogni nodo $i$ sia assegnato a $b_i$ posizioni nell'anello.
+\end{itemize}
 
-To do so, we first call `b_i` the bandwidth of node `i` and `Σ` the total allocated bandwidth.
-We define a ring of size `Σ` and for each position in the ring we assign a node `i` such that:
-- every `n`-long window in the ring contains distinct nodes;
-- every node `i` is assigned to `b_i` positions in the ring.
+Data una chiave, calcoliamo il suo hash (utilizzando XXH3\footnote{https://xxhash.com}, un algoritmo di hash veloce non crittografico) e troviamo la posizione nell'anello.
+La chiave viene assegnata ai \texttt{n} nodi a destra della posizione della chiave nell'anello.
 
-Given a key we compute its hash (with [XXH3](https://xxhash.com) a fast non-crypto hash algorithm)
- and find the position in the ring.
-The key is assigned to the `n` nodes to the right of the key's position in the ring.
+I nodi sono assegnati all'anello in modo iterativo, partendo dal primo nodo.
+Ogni nodo viene assegnato a $b_i$ posizioni, partendo dall'ultima assegnata e prendendo uno slot ogni $n$-esima posizione.
+Se lo slot è già occupato da un altro nodo, si salta e si prende il successivo.
 
-Nodes are assigned to the ring iteratively, starting from the first node.
-Each node is assigned to `b_i` positions starting from the last assigned and taking a slot every `n`-th position.
-If the slot is already taken by another node, we skip it and take its successor.
+Poiché la banda allocata può essere considerevolmente alta, la costruzione di un anello che soddisfi i criteri sopra descritti può essere costosa.
+Questa costruzione può essere evitata utilizzando una formula per trovare quale nodo è assegnato a una data posizione nell'anello, come descritto in \texttt{virt\_to\_peer} (vedi \url{https://virv12.github.io/kitsurai/ktd/state/struct.TableData.html#method.virt_to_peer}).
 
-As the allocated bandwidth could be considerably high the construction of a ring 
- that meets the above criteria could be expensive.
-This construction can be avoided by using a formula
- to find which node is assigned to a given position in the ring,
- see [virt_to_peer](https://virv12.github.io/kitsurai/ktd/state/struct.TableData.html#method.virt_to_peer).
+Per leggere o scrivere una chiave, si seguono i seguenti passaggi:
+\begin{enumerate}
+    \item Il client si connette a un nodo a sua scelta (detto \texttt{router}) e invia la chiave e il valore (se si tratta di una scrittura).
+    \item Il \texttt{router} calcola l'hash della chiave e determina i \texttt{n} nodi responsabili per quella chiave.
+    \item Il \texttt{router} invia la richiesta di lettura o scrittura ai nodi responsabili.
+    \item I nodi rispondono con il valore richiesto o confermano la scrittura.
+    \item Il \texttt{router} aggrega le risposte e restituisce al client i primi $r$ (o $w$) risultati disponibili.
+\end{enumerate}
 
-To read (or write) a key each of the `n` nodes is queried and the responses aggregated.
-The first `r` (or `w`) responses available are returned to the client.
+Se meno di $r$ (o $w$) nodi rispondono con successo, l'operazione fallisce e il client riceve un errore.
 
 \subsubsection{Availability Zones}
 \label{subsubsec:availability-zones}
 
-To guarantee the database's availability each node can be tagged with a string, 
- identifying its availability zone, AZ from now.
-To allocate each table's key in `n` AZs the previous allocation algorithm requires only a slight change:
-- the router shall not take more than `b` bandwidth from nodes in a single AZ;
-- nodes should be assigned in the ring ordered by their AZ.
+Per garantire la disponibilità del database, ogni nodo può essere etichettato con una stringa che identifica la sua Availability Zone (\texttt{AZ}).
+Due nodi appartenenti alla stessa \texttt{AZ} non possono essere scelti per replicare la stessa chiave.
+Per garantire che le chiavi siano replicate in modo da essere disponibili anche in caso di guasti a un'intera \texttt{AZ}, andiamo a cambiare l'algoritmo di allocazione delle chiavi:
+\begin{itemize}
+    \item durante la creazione della tabella il \texttt{router} non deve prendere più di \texttt{b} banda da nodi nella stessa \texttt{AZ};
+    \item i nodi devono essere assegnati all'anello in ordine di \texttt{AZ}.
+\end{itemize}
 
 \subsection{Remote Procedure Calls}
 \label{subsec:rpc}
 
-Remote procedures are executed with the following protocol:
-1. A opens a TCP connection to B;
-2. A sends the serialized RPC request;
-3. A closes its TCP stream (sending `FIN` to B);
-4. B waits until it has received all the available data;
-5. B deserializes and executes the RPC;
-6. B sends the RPC's response back and closes the connection;
-7. A waits until it has received all of the response and returns the value to the callee.
+Kitsurai utilizza un protocollo di Remote Procedure Call (RPC) per comunicare tra i nodi del cluster.
+Una richiesta RPC si svolge nel seguente modo:
+\begin{enumerate}
+    \item $A$ apre una connessione TCP a $B$.
+    \item $A$ invia la richiesta RPC serializzata.
+    \item $A$ chiude il suo stream TCP (inviando un pacchetto `FIN` a $B$).
+    \item $B$ attende di ricevere tutti i dati disponibili.
+    \item $B$ deserializza ed esegue la richiesta RPC.
+    \item $B$ invia la risposta RPC serializzata e chiude la connessione.
+    \item $A$ attende di ricevere tutti i dati della risposta e restituisce il valore al chiamante.
+\end{enumerate}
 
-## Future Features and Limitations
-The current implementation does not provide any method to:
-- resolve read conflicts;
-- choose table names.
+\subsection{Limitazione del Throughput}
+\label{subsec:limitazione-throughput}
 
-Both of these are intentionally not implemented as locking a solution to one of these problems
- requires strengthening the assumptions and increases the code complexity.
+In un sistema multi-tenant come Kitsurai è necessario evitare che un singolo client monopolizzi le risorse e comprometta le prestazioni degli altri.
+Per questo motivo, Kitsurai implementa un meccanismo di limitazione del throughput che garantisce a ogni client la banda richiesta al momento della creazione della tabella, anche in presenza di carichi elevati e concorrenti.
+Ogni nodo del cluster mantiene, per ciascuna tabella, una variabile \texttt{sched\_at} che indica il momento in cui il nodo sarà disponibile per eseguire nuove operazioni su quella tabella.
+Quando un client invia una richiesta di lettura o scrittura, il nodo attende fino al tempo \texttt{sched\_at} prima di eseguire l'operazione, quindi incrementa \texttt{sched\_at} di un intervallo pari a $\frac{1}{b}$, dove $b$ è la banda richiesta per la tabella.
 
-Nonetheless, both of these features could be implemented on top of the current interface as HTTP proxies.
-To resolve read conflicts a proxy could inject in every write a timestamp 
- and on reads pick the latest version available to both update the out of date nodes and return to the client.  
-For the latter another proxy could use the database itself as a storage for table names or an external database,
- to translate any query's table on the fly.
-
-Lastly physical disks are not accounted and the system 
- could be generalized to support multiple bandwidths on a single node.
-
-A limitation of the table allocation algorithm is its incapacity to manage the nodes' capacity.
- A table with little bandwidth requirements but large capacity needs could potentially brake the system.
-A mitigation for this problem could change the way the bandwidth's unit to represent
- some ratio between available capacity and actual speed, coupled with a limitation in key number and sizes.
-
-Currently, the cluster cannot change its nodes while it is running, 
- nor can a table migrate should a node persistently fail.
-It should be possible to add both of these features 
- where some way to migrate to be implemented.  
-
-## Benchmarks
-
-The benchmarks are run on three instances on the same machine using the `bench.sh` script.
-Below are the results on a log/log scale for the "item get" operation and the "item set" operation.
-
-![](./benchmarks/bench-get.svg)
-![](./benchmarks/bench-set.svg)
