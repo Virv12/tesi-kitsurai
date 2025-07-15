@@ -1,11 +1,19 @@
 \section{Architettura}
 \label{sec:architettura}
 
-Un sistema Kitsurai opera su un cluster, composto da un insieme statico di nodi, i quali possono risultare temporaneamente non disponibili.
-Il sistema organizza i dati in tabelle, ognuna identificata da un UUIDv7. Ogni tabella contiene coppie chiave-valore, dove sia le chiavi che i valori sono array di byte.
+Il database è organizzato in \emph{tabelle}, ciascuna identificata da un UUID versione 7\cite{rfc9562}.
+Ogni tabella contiene coppie chiave-valore, dove sia le chiavi sia i valori sono array di byte.
+Un sistema Kitsurai opera su un cluster, composto da un insieme statico di nodi, i quali possono occasionalmente risultare non disponibili.
+Un nodo corrisponde a un'istanza del programma, eseguibile su una macchina fisica o virtuale.
+Ciascun nodo può essere etichettato con una stringa che identifica la sua \emph{Availability Zone} (vedi sezione~\ref{subsec:availability-zones}).
+Ogni nodo mantiene una copia dei metadati di tutte le tabelle.
 
 \subsection{Interfaccia}
 \label{subsec:interfaccia}
+
+TODO: spiegare API HTTP o lasciare questa descrizione generica?
+
+\vspace{1em}
 
 Sono supportate quattro operazioni principali:
 \begin{itemize}
@@ -15,15 +23,25 @@ Sono supportate quattro operazioni principali:
     \item \texttt{set}: imposta il valore associato a una chiave in una tabella.
 \end{itemize}
 
+Ognuna di queste richieste può essere inviata a un nodo a scelta del client, che funge da \texttt{router} per inoltrare la richiesta ai nodi responsabili della tabella specificata.
+
 \subsection{Tabelle}
 \label{subsec:tabelle}
 
-Ogni tabella ha quattro parametri, specificati dall'utente al momento della creazione:
+Ogni tabella ha quattro parametri specificati dall'utente al momento della creazione:
 \begin{itemize}
     \item \texttt{bandwidth} o \texttt{b}: il numero di richieste al secondo che il sistema deve garantire per la tabella.
     \item \texttt{n}: il fattore di replicazione per ogni coppia chiave-valore.
-    \item \texttt{r}: il \texttt{read-concern}, ovvero il numero minimo di nodi che devono rispondere con successo a una richiesta di lettura.
-    \item \texttt{w}: il \texttt{write-concern}, ovvero il numero minimo di nodi che devono rispondere con successo a una richiesta di scrittura.
+    \item \texttt{read\_concern} o \texttt{r}: il numero minimo di nodi che devono rispondere con successo a una richiesta di lettura.
+    \item \texttt{write\_concern} o \texttt{w}: il numero minimo di nodi che devono rispondere con successo a una richiesta di scrittura.
+\end{itemize}
+
+E altri quattro parametri calcolati automaticamente:
+\begin{itemize}
+    \item \texttt{id}: un UUIDv7 che identifica la tabella, generato al momento della creazione.
+    \item $\Sigma$: la banda effettiva della tabella considerando l'effetto della replicazione, calcolata come $\Sigma = b \cdot n$.
+    \item \texttt{responsible\_nodes}: l'elenco dei nodi responsabili per la tabella, scelti in modo da garantire la replicazione e la disponibilità dei dati.
+    \item $b_i$: la banda allocata a ciascun nodo $i$ responsabile della tabella, tale che $\sum b_i = \Sigma$.
 \end{itemize}
 
 Ogni tabella è gestita da un insieme di nodi, chiamati \texttt{nodi responsabili}, scelti in modo da garantire la replicazione e la disponibilità dei dati.
@@ -40,7 +58,7 @@ Per creare una tabella, si seguono i seguenti passaggi:
     \item Il client si connette a un nodo a sua scelta (detto \texttt{router}) e invia i parametri \texttt{b}, \texttt{n}, \texttt{r} e \texttt{w} della tabella.
     \item Il \texttt{router} genera un UUID per la tabella e calcola la banda effettiva $\Sigma = b \cdot n$, per tenere conto della replicazione.
     \item Il \texttt{router} richiede agli altri nodi la banda disponibile per la nuova tabella, evitando di allocare più di \texttt{b} su un singolo nodo, garantendo così che la tabella venga replicata esattamente \texttt{n} volte.
-    \item Una volta ottenuta sufficiente banda (almeno $\Sigma$), il \texttt{router} definisce l'elenco dei \texttt{nodi responsabili} e le rispettive quote.
+    \item Una volta ottenuta sufficiente banda (almeno $\Sigma$), il \texttt{router} definisce l'elenco dei \texttt{nodi responsabili} e le rispettive quote $b_i$.
     \item Il \texttt{router} richiede ai \texttt{nodi responsabili} di eseguire il \texttt{commit} della tabella.
     \item Se tutti i nodi effettuano il \texttt{commit}, la creazione ha successo e il \texttt{router} restituisce al client l'UUID della nuova tabella.
 \end{enumerate}
@@ -99,6 +117,25 @@ Ogni nodo è assegnato a $b_i$ posizioni, proseguendo dall'ultima posizione asse
 Se lo slot è già occupato da un altro nodo, si salta al successivo.
 È possibile verificare che questa costruzione rispetta le proprietà sopra descritte.
 
+\begin{samepage}
+\noindent In pseudocodice, la costruzione dell'anello può essere rappresentata come segue:
+\begin{minted}{python}
+def build_ring(table):
+    sigma = table.bandwidth * table.n
+    ring = [None] * sigma
+    current_position = 0
+
+    for node in table.responsible_nodes:
+        for _ in range(node.bandwidth):
+            if ring[current_position] is not None:
+                current_position = (current_position + 1) % sigma
+            ring[current_position] = node
+            current_position = (current_position + table.n) % sigma
+
+    return ring
+\end{minted}
+\end{samepage}
+
 \subsubsection{Costruzione implicita}
 \label{subsubsec:costruzione-implicita}
 
@@ -106,7 +143,7 @@ Poiché la banda allocata può essere considerevolmente elevata, la costruzione 
 Per evitarla, è possibile usare un algoritmo che calcola direttamente il nodo assegnato a una posizione $i$ nell'anello:
 
 \begin{enumerate}
-    \item Precalcoliamo i prefissi: $c_{i+1} = c_i + b_i$, con $c_0 = 0$.
+    \item Precalcoliamo le somme prefisse: $c_{i+1} = c_i + b_i$, con $c_0 = 0$.
     \item Calcoliamo $j = \left\lfloor \frac{i}{n} \right\rfloor + (i \bmod n) \cdot b$.
     \item Troviamo il nodo $x$ tale che $c_x \leq j < c_{x+1}$ (usando eventualmente una ricerca binaria).
 \end{enumerate}
@@ -156,6 +193,27 @@ Ogni nodo del cluster mantiene, per ciascuna tabella, una variabile \texttt{sche
 Quando un client invia una richiesta di lettura o scrittura, il nodo attende fino al tempo indicato da \texttt{sched\_at} prima di eseguire l'operazione, quindi incrementa \texttt{sched\_at} di un intervallo pari a $\frac{1}{b}$, dove $b$ rappresenta la banda richiesta per la tabella.
 Se \texttt{sched\_at} è già passato, il sistema permetterebbe di eseguire operazioni in modo incontrollato finché \texttt{sched\_at} non raggiunge il tempo corrente; per questo motivo, se \texttt{sched\_at} è già passato, viene aggiornato a 100 ms prima del tempo corrente, permettendo così un breve burst controllato di operazioni.
 
+\begin{samepage}
+\noindent In pseudocodice, la limitazione del throughput può essere rappresentata come segue:
+\begin{minted}{python}
+def limit_throughput(table, operation):
+    current_time = get_current_time()
+    if table.sched_at > current_time - 0.1s:
+        table.sched_at = current_time - 0.1s
+    run_at = table.sched_at
+    table.sched_at += 1s / table.bandwidth
+    wait_until(run_at)
+    execute_operation(operation)
+\end{minted}
+\end{samepage}
+
+\subsection{Allocazione della Banda}
+\label{subsec:allocazione-banda}
+
+Per l'allocazione della banda, Kitsurai adotta un modello molto semplice: si assume che il numero massimo di operazioni al secondo eseguibili da una macchina sia fisso e indipendente ogni altro fattore come la dimensione delle letture e scritture in corso (si veda la sezione~\ref{subsec:non-so} per i dati sperimentali).
+Per questo motivo, a ciascun nodo è sufficiente conoscere la banda massima - misurata in precedenza utilizzando operazioni di dimensione standard - per determinare se sia in grado o meno di gestire il carico richiesto da una tabella.
+A tal fine, è necessario l'impiego di dischi SSD, in quanto garantiscono prestazioni costanti e prevedibili, a differenza degli HDD, soggetti a rallentamenti imprevedibili dovuti a operazioni di seek e latenza di accesso.
+
 \subsection{Remote Procedure Calls}
 \label{subsec:rpc}
 
@@ -170,3 +228,16 @@ Una richiesta RPC si svolge nel seguente modo:
     \item $B$ invia la risposta RPC serializzata e chiude la connessione.
     \item $A$ attende di ricevere tutti i dati della risposta e restituisce il valore al chiamante.
 \end{enumerate}
+
+\subsection{Librerie}
+\label{subsec:librerie}
+
+Kitsurai utilizza diverse librerie per implementare le funzionalità del sistema, le più rilevanti sono:
+\begin{itemize}
+    \item \texttt{tokio}\footnote{\url{https://tokio.rs/}}: per la gestione della concorrenza e delle operazioni asincrone.
+    \item \texttt{axum}\footnote{\url{https://crates.io/crates/axum}}: per la gestione delle richieste HTTP e la creazione di un server web.
+    \item \texttt{serde}\footnote{\url{https://serde.rs/}} e \texttt{postcard}\footnote{\url{https://crates.io/crates/postcard}}: per la serializzazione e deserializzazione dei dati nelle richieste e risposte RPC.
+    \item \texttt{uuid}\footnote{\url{https://crates.io/crates/uuid}}: per la generazione e gestione degli UUID delle tabelle.
+    \item \texttt{xxhash-rust}\footnote{\url{https://crates.io/crates/xxhash-rust}}: per il calcolo degli hash delle chiavi, utilizzando l'algoritmo XXH3.
+    \item \texttt{clap}\footnote{\url{https://crates.io/crates/clap}}: per la gestione della riga di comando e dei parametri di configurazione.
+\end{itemize}

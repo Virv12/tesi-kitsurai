@@ -32,7 +32,7 @@ Proposed Approach
 - focus on SSD storage, rotational would be impossible
 
 - technical description: software architecture
-  (Rust run-time | Tokio | Kitsumai)
+  (Rust run-time | Tokio | Kitsurai)
   - hash-based ring, with heterogeneous capacity handling
   - replication protocol: sequence/diagram
     configurable "write concern" (can implement quorum-based protocols)
