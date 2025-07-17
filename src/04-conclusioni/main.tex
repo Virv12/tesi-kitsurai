@@ -8,12 +8,15 @@
 %  => table names?
 %  => read conflicts? (lack of a catch-up protocol)
 
-TODO
+Il progetto \textit{Kitsurai} nasce con l'obiettivo di realizzare un key-value store distribuito capace di offrire prestazioni prevedibili e garantite in ambienti multi-tenant, un aspetto spesso trascurato nelle principali soluzioni open-source. Il sistema proposto introduce un modello innovativo di controllo esplicito del throughput, abbinato a un'architettura scalabile e resiliente.
+
+I risultati sperimentali ottenuti dimostrano la validità dell'approccio proposto. Il sistema è in grado di mantenere una latenza controllata anche sotto carichi elevati, riuscendo a isolare efficacemente i tenant e a garantire una quota di banda minima a ciascuno. Le politiche di allocazione e limitazione del throughput, così come l'uso consapevole delle availability zones, contribuiscono ulteriormente alla stabilità del sistema.
 
 \subsection{Limitazioni}
 \label{subsec:limitazioni}
 
-Il progetto, pur dimostrando la validità dell'approccio proposto, presenta alcune limitazioni che richiedono ulteriori sviluppi. In particolare, l'implementazione attuale non prevede:
+Il progetto presenta alcune limitazioni che richiedono ulteriori sviluppi.
+In particolare, l'implementazione attuale non prevede:
 
 \begin{itemize}
     \item Un modello di controllo degli accessi per la gestione dei permessi.
@@ -23,4 +26,5 @@ Il progetto, pur dimostrando la validità dell'approccio proposto, presenta alcu
     \item Il supporto a macchine dotate di più dischi eterogenei.
     \item Strategie per la gestione ottimale della capacità dei nodi, soprattutto in scenari in cui le tabelle presentano requisiti sbilanciati in termini di banda e spazio di archiviazione.
     \item Il supporto per l'aggiunta e la rimozione dinamica dei nodi dal sistema.
+    \item Milgioramenti al protocollo di RPC, magari usando QUIC\cite{QUIC}.
 \end{itemize}
