@@ -1,6 +1,10 @@
 \section{Architettura}
 \label{sec:architettura}
 
+% 2.2.1 Puoi spiegare forse meglio lo stato preparata che lo butti li e basta
+% 2.4 Disegnino?
+% 2.6 Disegnino?
+
 Il database è organizzato in \emph{tabelle}, ciascuna identificata da un UUID versione~7~\cite{rfc9562}.
 Ogni tabella contiene coppie chiave-valore, dove sia le chiavi sia i valori sono array di byte.
 
@@ -226,7 +230,7 @@ def limit_throughput(table, operation):
 \subsection{Allocazione della Banda}
 \label{subsec:allocazione-banda}
 
-Per l'allocazione della banda, Kitsurai adotta un modello molto semplice: si assume che il numero massimo di operazioni al secondo eseguibili da una macchina sia fisso e indipendente da altri fattori come la dimensione delle letture e scritture in corso (si veda la sezione~\ref{subsec:risultati-dimensione} per i dati sperimentali).
+Per l'allocazione della banda, Kitsurai adotta un modello molto semplice: si assume che il numero massimo di operazioni al secondo eseguibili da una macchina sia fisso e indipendente da altri fattori come la dimensione delle letture e scritture in corso.
 
 Per questo motivo, a ciascun nodo è sufficiente conoscere la banda massima - misurata in precedenza utilizzando operazioni di dimensione standard - per determinare se sia in grado o meno di gestire il carico richiesto da una tabella.
 A tal fine, è necessario l'impiego di dischi SSD, in quanto garantiscono prestazioni costanti e prevedibili, a differenza degli HDD, soggetti a rallentamenti imprevedibili dovuti a operazioni di seek e latenza di accesso.

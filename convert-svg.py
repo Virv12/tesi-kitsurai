@@ -10,7 +10,7 @@ main = typer.Typer()
 
 
 @main.command()
-def convert(svg: Path, chrome: Path = Path('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')):
+def convert(svg: Path, chrome: Path = Path('/usr/bin/chromium')):
     print(f'Converting {svg!s}')
     with tempfile.NamedTemporaryFile(suffix='.svg') as tmp:
         tmp = Path(tmp.name)
