@@ -1,10 +1,6 @@
 \section{Architettura}
 \label{sec:architettura}
 
-% 2.2.1 Puoi spiegare forse meglio lo stato preparata che lo butti li e basta
-% 2.4 Disegnino?
-% 2.6 Disegnino?
-
 Il database è organizzato in \emph{tabelle}, ciascuna identificata da un UUID versione~7~\cite{rfc9562}.
 Ogni tabella contiene coppie chiave-valore, dove sia le chiavi sia i valori sono array di byte.
 
@@ -48,6 +44,7 @@ E altri quattro parametri calcolati automaticamente:
 Ogni tabella è gestita da un insieme di nodi, chiamati \emph{nodi responsabili}, scelti in modo da garantire la replicazione e la disponibilità dei dati.
 In ogni nodo, una tabella può trovarsi in uno dei tre stati: \emph{preparata}, \emph{creata} o \emph{cancellata}.
 Le tabelle possono solo progredire di stato, nell'ordine: \emph{preparata} $\rightarrow$ \emph{creata} $\rightarrow$ \emph{cancellata}.
+Una tabella è \emph{preparata} quando è stata allocata la banda richiesta, ma non è ancora stata creata.
 Una tabella si considera \emph{creata} quando tutti i nodi responsabili la considerano tale; si considera \emph{cancellata} quando almeno un nodo la contrassegna come tale.
 Lo stato di una tabella viene sincronizzato tra i nodi tramite il protocollo di \emph{Gossip} (vedi sezione~\ref{subsec:gossip}).
 
@@ -177,6 +174,84 @@ Per contraddizione, supponiamo che un nodo $k$ abbia banda $b_k > b$.
 Allora tale nodo conterrà $\displaystyle \frac{b_k}{b} > 1$ del totale delle chiavi, il che è assurdo.
 
 Questo dimostra che le condizioni imposte durante la creazione della tabella sono \emph{necessarie e sufficienti} per il corretto funzionamento del sistema.
+
+\subsubsection{Esempio}
+\label{subsubsec:anello-esempio}
+
+Nel seguito riportiamo un esempio concreto di costruzione dell'anello con i parametri:
+\[
+    n = 3,\quad
+    b = 4,\quad
+    \Sigma = b \cdot n = 12,
+\]
+e cinque nodi con bande:
+\[
+    b_0 = 4,\; b_1 = 3,\; b_2 = 2,\; b_3 = 1,\; b_4 = 2.
+\]
+
+\paragraph{Costruzione esplicita}
+Iniziamo con un array circolare \(r_0, r_1, \dots, r_{11}\) di lunghezza 12. Ogni nodo~\(i\) viene assegnato a \(b_i\) posizioni saltando di \(n=3\) slot a partire dall'ultima posizione occupata.
+I posizionamenti risultano:
+\[
+    \begin{array}{rl}
+        \text{Nodo }0\;(b_0=4): & r_{0\phantom{0}} = 0 \\
+                                & r_{3\phantom{0}} = 0 \\
+                                & r_{6\phantom{0}} = 0 \\
+                                & r_{9\phantom{0}} = 0 \\[0.5ex]
+        \text{Nodo }1\;(b_1=3): & r_{1\phantom{0}} = 1 \\
+                                & r_{4\phantom{0}} = 1 \\
+                                & r_{7\phantom{0}} = 1 \\[0.5ex]
+        \text{Nodo }2\;(b_2=2): & r_{10} = 2 \\
+                                & r_{2\phantom{0}} = 2 \\[0.5ex]
+        \text{Nodo }3\;(b_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
+        \text{Nodo }4\;(b_4=2): & r_{8\phantom{0}} = 4 \\
+                                & r_{11} = 4
+    \end{array}
+\]
+Di conseguenza otteniamo:
+\[
+    \begin{array}{c|cccccccccccc}
+        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11\\\hline
+        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2  & 4
+    \end{array}
+\]
+È immediato verificare che in ogni finestra di lunghezza \(n=3\) compaiano nodi distinti e che ciascun nodo~\(i\) occupi esattamente \(b_i\) posizioni.
+
+\paragraph{Costruzione implicita}
+Per la costruzione implicita utilizziamo l'algoritmo che calcola direttamente il nodo responsabile di ogni posizione \(i\). Innanzitutto definiamo l'array delle somme prefisse
+\[
+    c_k = \sum_{j=0}^{k-1} b_j
+\]
+cioè:
+\[
+    \begin{array}{c|cccccc}
+        k   & 0 & 1 & 2 & 3 & 4 & 5\\\hline
+        b_k & 4 & 3 & 2 & 1 & 2 & \\\hline
+        c_k & 0 & 4 & 7 & 9 & 10 & 12
+    \end{array}
+\]
+Quindi calcoliamo
+\[
+    o_i = \Bigl\lfloor \frac{i}{n} \Bigr\rfloor + (i \bmod n) \cdot b.
+\]
+Ad esempio, per \(i = 5\):
+\[
+    o_5 = \Bigl\lfloor \tfrac{5}{3} \Bigr\rfloor + (5 \bmod 3) \cdot 4 = 1 + 2\cdot4 = 9.
+\]
+Cerchiamo quindi \(k\) tale che
+\[
+    c_k \le o_5 < c_{k+1},
+\]
+troviamo \(c_3 = 9 \le 9 < c_4 = 10\), dunque il nodo responsabile in \(i=5\) è il nodo~3.
+Ripetendo per tutti gli \(i=0,\dots,11\) otteniamo:
+\[
+    \begin{array}{c|cccccccccccc}
+        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11\\\hline
+        o_i & 0 & 4 & 8 & 1 & 5 & 9 & 2 & 6 & 10 & 3 & 7 & 11\\\hline
+        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2 & 4
+    \end{array}
+\]
+In questo modo ricostruiamo l'anello senza allocare esplicitamente un array di dimensione \(\Sigma\).
 
 \subsection{Operazioni \texttt{get} e \texttt{set}}
 \label{subsec:get-set}

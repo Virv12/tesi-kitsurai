@@ -1,30 +1,21 @@
 \section{Conclusioni}
 \label{sec:conclusioni}
 
-%Conclusions
-%- works? really works?
-%- limitations
-%  => access control model
-%  => table names?
-%  => read conflicts? (lack of a catch-up protocol)
+Il progetto \textit{Kitsurai} è stato sviluppato con l'obiettivo di realizzare un key-value store distribuito in grado di offrire prestazioni prevedibili e garantite in ambienti multi-tenant, un'esigenza spesso trascurata nelle principali soluzioni open-source esistenti.
 
-Il progetto \textit{Kitsurai} nasce con l'obiettivo di realizzare un key-value store distribuito capace di offrire prestazioni prevedibili e garantite in ambienti multi-tenant, un aspetto spesso trascurato nelle principali soluzioni open-source. Il sistema proposto introduce un modello innovativo di controllo esplicito del throughput, abbinato a un'architettura scalabile e resiliente.
-
-I risultati sperimentali ottenuti dimostrano la validità dell'approccio proposto. Il sistema è in grado di mantenere una latenza controllata anche sotto carichi elevati, riuscendo a isolare efficacemente i tenant e a garantire una quota di banda minima a ciascuno. Le politiche di allocazione e limitazione del throughput, così come l'uso consapevole delle availability zones, contribuiscono ulteriormente alla stabilità del sistema.
+I risultati sperimentali confermano la validità dell'approccio adottato: il sistema riesce a mantenere una latenza controllata anche in presenza di carichi elevati e client malevoli, garantendo un efficace isolamento tra i tenant e assicurando a ciascuno una quota minima di banda.
 
 \subsection{Limitazioni}
 \label{subsec:limitazioni}
 
-Il progetto presenta alcune limitazioni che richiedono ulteriori sviluppi.
-In particolare, l'implementazione attuale non prevede:
+Nonostante i risultati promettenti, l'implementazione attuale presenta alcune limitazioni che offrono spunti per futuri sviluppi. In particolare, il sistema non include ancora:
 
 \begin{itemize}
-    \item Un modello di controllo degli accessi per la gestione dei permessi.
-    \item Un protocollo di catch-up per il reintegro dei nodi dopo un'interruzione.
-    \item Meccanismi efficaci per la risoluzione dei conflitti in fase di lettura.
-    \item L'indentificazione delle tabelle tramite nomi scelti dall'utente.
-    \item Il supporto a macchine dotate di più dischi eterogenei.
-    \item Strategie per la gestione ottimale della capacità dei nodi, soprattutto in scenari in cui le tabelle presentano requisiti sbilanciati in termini di banda e spazio di archiviazione.
+    \item Un modello di controllo degli accessi per la gestione granulare dei permessi.
+    \item Un protocollo di catch-up per il reintegro dei nodi dopo interruzioni prolungate.
+    \item Meccanismi robusti per la risoluzione dei conflitti durante le operazioni di lettura.
+    \item La possibilità di assegnare nomi personalizzati alle tabelle da parte degli utenti.
+    \item Strategie per una gestione ottimale della capacità dei nodi, in particolare quando le tabelle hanno requisiti sbilanciati in termini di banda o spazio di archiviazione.
     \item Il supporto per l'aggiunta e la rimozione dinamica dei nodi dal sistema.
-    \item Milgioramenti al protocollo di RPC, magari usando QUIC\cite{QUIC}.
+    \item Un protocollo RPC migliorato, basato su tecnologie già esistenti, ad esempio QUIC~\cite{QUIC}.
 \end{itemize}
