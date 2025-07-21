@@ -6,9 +6,9 @@ In un contesto in cui le applicazioni devono servire milioni di utenti contempor
 
 Tali proprietà devono coesistere con l'esigenza di mantenere bassi tempi di risposta e garantire una gestione efficiente delle risorse.
 I sistemi di gestione dati tradizionali, basati su modelli relazionali, risultano spesso inadatti a questi nuovi scenari distribuiti.
-Per questo motivo, sempre più frequentemente, le architetture moderne si affidano a soluzioni \textit{NoSQL} che, in cambio di operazioni più semplificate, offrono un overhead inferiore e una migliore scalabilità rispetto ai tradizionali database \textit{SQL}.
+Per questo motivo, sempre più frequentemente, le architetture moderne si affidano a soluzioni \textit{NoSQL} che, in cambio di operazioni più semplici, offrono un overhead inferiore e una migliore scalabilità rispetto ai tradizionali database \textit{SQL}.
 
-Un altro aspetto di crescente importanza è la latenza nell'accesso ai dati, come osservato su piattaforme come \textit{DynamoDB} \cite{Dynamo2007}, che garantiscono tempi di risposta dell'ordine dei millisecondi \cite{DynamoWhitepaper}.
+Un altro aspetto di crescente importanza è la latenza nell'accesso ai dati, come osservato su piattaforme come \textit{DynamoDB} \cite{Dynamo2007}, che garantiscono tempi di risposta sotto i 10~ms \cite{DynamoWhitepaper}.
 Tuttavia, fornire garanzie di latenza e prestazioni in ambienti distribuiti e \textit{multi-tenant} si rivela estremamente complesso.
 
 Le principali soluzioni open-source, come \textit{MongoDB} \cite{Mongo} o \textit{Cassandra} \cite{Cassandra}, adottano un approccio di tipo \textit{best effort}, senza garantire limiti precisi sulla latenza o sul throughput, soprattutto quando più client condividono le risorse.

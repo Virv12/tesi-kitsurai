@@ -3,7 +3,7 @@
 
 Il progetto \textit{Kitsurai} è stato sviluppato con l'obiettivo di realizzare un key-value store distribuito in grado di offrire prestazioni prevedibili e garantite in ambienti multi-tenant, un'esigenza spesso trascurata nelle principali soluzioni open-source esistenti.
 
-I risultati sperimentali confermano la validità dell'approccio adottato: il sistema riesce a mantenere una latenza controllata anche in presenza di carichi elevati e client malevoli, garantendo un efficace isolamento tra i tenant e assicurando a ciascuno una quota minima di banda.
+I risultati sperimentali confermano la validità dell'approccio adottato: il sistema riesce a mantenere delle prestazioni controllate anche in presenza di carichi elevati e client malevoli, garantendo un efficace isolamento tra i tenant e assicurando a ciascuno una quota minima di banda e una latenza massima accettabile.
 
 \subsection{Limitazioni}
 \label{subsec:limitazioni}
@@ -17,5 +17,5 @@ Nonostante i risultati promettenti, l'implementazione attuale presenta alcune li
     \item La possibilità di assegnare nomi personalizzati alle tabelle da parte degli utenti.
     \item Strategie per una gestione ottimale della capacità dei nodi, in particolare quando le tabelle hanno requisiti sbilanciati in termini di banda o spazio di archiviazione.
     \item Il supporto per l'aggiunta e la rimozione dinamica dei nodi dal sistema.
-    \item Un protocollo RPC migliorato, basato su tecnologie già esistenti, ad esempio QUIC~\cite{QUIC}.
+    \item Un protocollo RPC più performante e cifrato, basato su tecnologie già esistenti, ad esempio QUIC~\cite{QUIC}.
 \end{itemize}

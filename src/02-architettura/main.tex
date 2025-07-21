@@ -27,7 +27,7 @@ Ognuna di queste richieste può essere inviata a un nodo a scelta del client, ch
 
 Ogni tabella ha quattro parametri specificati dall'utente al momento della creazione:
 \begin{itemize}
-    \item \texttt{bandwidth} o \texttt{b}: il numero di richieste al secondo che il sistema deve garantire per la tabella.
+    \item \texttt{bandwidth} o \texttt{b}: il numero di richieste totali (\texttt{get} e \texttt{set}) che il sistema deve garantire per la tabella, espresso in richieste al secondo.
     \item \texttt{n}: il fattore di replicazione per ogni coppia chiave-valore.
     \item \texttt{read\_concern} o \texttt{r}: il numero minimo di nodi che devono rispondere con successo a una richiesta di lettura.
     \item \texttt{write\_concern} o \texttt{w}: il numero minimo di nodi che devono rispondere con successo a una richiesta di scrittura.
@@ -37,8 +37,8 @@ E altri quattro parametri calcolati automaticamente:
 \begin{itemize}
     \item \texttt{id}: un UUIDv7 che identifica la tabella, generato al momento della creazione.
     \item $\Sigma$: la banda effettiva della tabella considerando l'effetto della replicazione, calcolata come $\displaystyle \Sigma = b \cdot n$.
-    \item \texttt{responsible\_nodes}: l'elenco dei nodi responsabili per la tabella, scelti in modo da garantire la replicazione e la disponibilità dei dati.
-    \item $b_i$: la banda allocata a ciascun nodo $i$ responsabile della tabella, tale che $\displaystyle \sum b_i = \Sigma$.
+    \item \texttt{responsible\_nodes}: l'elenco dei nodi sui quali le coppie chiave-valore della tabella sono distruibute, scelti in modo da garantire la replicazione e la disponibilità dei dati.
+    \item $b_i$: la banda allocata dal nodo $i$ per la tabella, tale che $\displaystyle \sum b_i = \Sigma$.
 \end{itemize}
 
 Ogni tabella è gestita da un insieme di nodi, chiamati \emph{nodi responsabili}, scelti in modo da garantire la replicazione e la disponibilità dei dati.
@@ -55,10 +55,10 @@ Per creare una tabella, si seguono i seguenti passaggi:
 \begin{enumerate}
     \item Il client si connette a un nodo a sua scelta (detto \emph{router}) e invia i parametri \texttt{b}, \texttt{n}, \texttt{r} e \texttt{w} della tabella.
     \item Il router genera un \texttt{id} per la tabella e calcola la banda effettiva $\Sigma = b \cdot n$, per tenere conto della replicazione.
-    \item Il router richiede agli altri nodi la banda disponibile per la nuova tabella, evitando di allocare più di $b$ su un singolo nodo, garantendo così che la tabella venga replicata esattamente $n$ volte. Se un nodo risponde a questa richiesta segna la tabella come \emph{preparata}.
+    \item Il router richiede agli altri nodi la banda disponibile per la nuova tabella, allocando fino a $b$ su un singolo nodo, garantendo così che la tabella venga replicata esattamente $n$ volte. Se un nodo non è disponibile viene saltato, mentre se risponde segna la tabella come \emph{preparata}.
     \item Una volta ottenuta sufficiente banda (almeno $\Sigma$), il router definisce l'elenco dei nodi responsabili e le rispettive quote $b_i$.
-    \item Il router richiede ai nodi precedentemente interrogati di eseguire il \texttt{commit} della tabella, su questi nodi la tabella entra nello stato \emph{creata}.
-    \item Se tutti i nodi effettuano il \texttt{commit}, la creazione ha successo e il router restituisce al client l'\texttt{id} della nuova tabella.
+    \item Il router richiede ai nodi che hanno risposto allo step~3 di eseguire il \texttt{commit} della tabella, su questi nodi la tabella entra nello stato \emph{creata}.
+    \item Se tutte le richieste di \texttt{commit} hanno successo, la creazione ha successo e il router restituisce al client l'\texttt{id} della nuova tabella, altrimenti la creazione fallisce e il router restituisce un errore.
 \end{enumerate}
 
 Se un nodo riceve una richiesta di preparazione per una nuova tabella, ma non riceve un \texttt{commit} entro un certo timeout, segnerà la tabella come \emph{cancellata}.
@@ -69,10 +69,10 @@ Per cancellare una tabella, è sufficiente che un nodo la contrassegni come \emp
 \subsubsection{Metadati}
 \label{subsubsec:metadati}
 
-Il database contiene una tabella speciale, non accessibile dagli utenti, identificata da uno UUIDv8 generato dai byte \texttt{kitsuraimetadata}.
+Il database contiene una tabella speciale, non accessibile dagli utenti, identificata da uno UUIDv8 generato dai 16 byte \texttt{kitsuraimetadata}.
 Questa tabella contiene i metadati di tutte le tabelle create nel cluster, inclusi i relativi parametri e i nodi responsabili.
 Grazie a ciò, ogni nodo può comportarsi come router nelle richieste di \texttt{get} e \texttt{set}.
-La tabella dei metadati, identificata da uno UUIDv8, non può entrare in conflitto con gli UUIDv7 generati per le tabelle degli utenti.
+La tabella dei metadati, identificata da uno UUIDv8, non può entrare in conflitto con gli UUIDv7 generati per le tabelle degli utenti, poiché in uno UUID è codificata la versione.
 
 \subsection{Gossip}
 \label{subsec:gossip}
@@ -80,7 +80,7 @@ La tabella dei metadati, identificata da uno UUIDv8, non può entrare in conflit
 Ogni nodo del cluster avvia uno scambio di \emph{gossip} con un peer scelto casualmente ogni secondo.
 Durante lo scambio, i due nodi sincronizzano i metadati delle tabelle \emph{create} e \emph{cancellate}, ma non di quelle \emph{in preparazione}.
 Se una stessa tabella si trova in stati diversi su due nodi, prevale quello che rappresenta un progresso maggiore rispetto all'altro.
-L'utilizzo di un Merkle tree consente ai nodi di identificare rapidamente le tabelle divergenti e sincronizzarsi solo su quelle.
+L'utilizzo di un Merkle~tree~\cite{MerkleTree} consente ai nodi di identificare rapidamente le tabelle divergenti e sincronizzarsi solo su quelle.
 Se il peer non è disponibile, lo scambio fallisce.
 Il gossip permette al sistema di raggiungere la coerenza dei metadati tra i nodi anche in presenza di nodi offline o errori di rete.
 
@@ -91,10 +91,12 @@ Per garantire la disponibilità del database, vogliamo che ogni chiave sia repli
 
 \begin{itemize}
     \item Ogni chiave è replicata su \texttt{n} nodi distinti tra quelli responsabili della tabella, per garantire la disponibilità dei dati anche in caso di guasti a uno o più nodi.
-    \item Ogni nodo $i$ ha una banda allocata proporzionale alla sua capacità, al fine di garantire una distribuzione equa del carico tra i nodi. Quindi, dato che ogni chiave è replicata su \texttt{n} nodi distinti, ogni nodo contiene una frazione $\displaystyle n \cdot \frac{b_i}{\Sigma} = \frac{b_i}{b}$ del totale delle chiavi.
+    \item Le chiavi sono distribuite in modo pesato rispetto alla banda allocata per ogni nodo, in modo che i nodi con banda maggiore gestiscano più chiavi. Quindi, dato che ogni chiave è replicata su \texttt{n} nodi distinti, ogni nodo contiene una frazione $\displaystyle n \cdot \frac{b_i}{\Sigma} = \frac{b_i}{b}$ del totale delle chiavi.
 \end{itemize}
 
-Per soddisfare questi requisiti, definiamo l'\emph{anello di replicazione} come un array circolare di dimensione $\Sigma$.
+Per soddisfare questi requisiti, definiamo l'\emph{anello di replicazione}.
+Per definire l'anello richiediamo che i valori $b_i$ siano interi. Se è necessaria una maggiore precisione nell'esprimere la banda allocata, si può utilizzare un unità di misura più piccola, ad esempio richieste al millisecondo, e quindi moltiplicare i valori di $b_i$ per un fattore di scala, ad esempio 1000, per ottenere valori interi.
+L'\emph{anello di replicazione} è un array circolare di dimensione $\Sigma$.
 Per ogni posizione nell'anello, assegniamo un nodo $i$ in modo tale che:
 
 \begin{itemize}
@@ -103,15 +105,15 @@ Per ogni posizione nell'anello, assegniamo un nodo $i$ in modo tale che:
 \end{itemize}
 
 Data una chiave, calcoliamo il suo hash (utilizzando \texttt{XXH3}\footnote{\url{https://xxhash.com}}, un algoritmo di hash veloce e non crittografico) e troviamo la posizione corrispondente nell'anello.
-La chiave viene assegnata ai \texttt{n} nodi immediatamente successivi alla posizione calcolata.
+La chiave viene assegnata agli \texttt{n} nodi immediatamente successivi alla posizione calcolata.
 Se le proprietà dell'anello sono rispettate, anche i requisiti di disponibilità e bilanciamento della banda risultano garantiti.
 
 \subsubsection{Costruzione esplicita}
 \label{subsubsec:costruzione-esplicita}
 
 I nodi sono assegnati all'anello in modo iterativo, partendo dal primo nodo.
-Ogni nodo è assegnato a $b_i$ posizioni, proseguendo dall'ultima posizione assegnata al nodo precedente (o da una posizione arbitraria nel caso del primo nodo), e occupando uno slot ogni $n$ posizioni.
-Se lo slot è già occupato da un altro nodo, si salta al successivo.
+Ogni nodo è assegnato a $b_i$ posizioni, proseguendo dall'ultima posizione assegnata al nodo precedente (o da una posizione arbitraria nel caso del primo nodo), e occupando una posizione ogni $n$.
+Se questa è già stata assegnata ad un altro nodo, si salta al successivo; è garantito che non sarà mai necessario saltare due posizioni consecutive.
 Poiché ogni nodo ha banda $b_i \leq b$, e l'anello ha dimensione $\Sigma = b \cdot n$, è garantito che ogni nodo possa essere assegnato a $b_i$ posizioni senza svolgere un ciclo completo dell'anello, quindi tutte le posizioni sono distanti tra loro di almeno $n$ posizioni.
 Quindi questa costruzione rispetta le proprietà sopra descritte per l'\emph{anello di replicazione}.
 
@@ -124,7 +126,7 @@ def build_ring(table):
     current_position = 0
 
     for node in table.responsible_nodes:
-        for _ in range(node.bandwidth):
+        for _ in range(table.bandwidth[node]):
             if ring[current_position] is not None:
                 current_position = (current_position + 1) % sigma
             ring[current_position] = node
@@ -153,7 +155,7 @@ def get_node_at_position(table, i):
     o_i = (i // n) + (i % n) * b
 
     sum = 0
-    for node in enumerate(table.responsible_nodes):
+    for node in table.responsible_nodes:
         sum += node.bandwidth
         if sum > o_i:
             return node
@@ -168,29 +170,31 @@ L'algoritmo esegue quindi in tempo logaritmico rispetto al numero di nodi respon
 \label{subsubsec:esistenza}
 
 Come mostrato, se ogni nodo soddisfa la condizione $b_i \leq b$ (come garantito durante la creazione della tabella), allora l'anello di replicazione esiste e può essere costruito.
-Tuttavia, se queste condizioni non sono rispettate, l'anello non può esistere: non è possibile assegnare le chiavi in modo che rispettino simultaneamente le condizioni di replica e di banda.
+
+Poiché la dimensione dell'anello è $\Sigma = b \cdot n$, potremmo provare a costruire l'anello anche se un nodo ha banda $b < b_k \leq \Sigma$.
+Tuttavia, sotto queste condizioni, l'anello non può esistere: non è possibile assegnare le chiavi in modo che rispettino simultaneamente le condizioni di replica e di banda.
 
 Per contraddizione, supponiamo che un nodo $k$ abbia banda $b_k > b$.
-Allora tale nodo conterrà $\displaystyle \frac{b_k}{b} > 1$ del totale delle chiavi, il che è assurdo.
+Allora tale nodo conterrà $\displaystyle n \cdot \frac{b_k}{\Sigma} = \frac{b_k}{b} > 1$ del totale delle chiavi, il che è assurdo.
 
 Questo dimostra che le condizioni imposte durante la creazione della tabella sono \emph{necessarie e sufficienti} per il corretto funzionamento del sistema.
 
 \subsubsection{Esempio}
 \label{subsubsec:anello-esempio}
 
-Nel seguito riportiamo un esempio concreto di costruzione dell'anello con i parametri:
+Nel seguito riportiamo un esempio concreto di costruzione dell'anello per una tabella con i parametri:
 \[
     n = 3,\quad
     b = 4,\quad
     \Sigma = b \cdot n = 12,
 \]
-e cinque nodi con bande:
+e cinque nodi con banda allocata per la tabella:
 \[
     b_0 = 4,\; b_1 = 3,\; b_2 = 2,\; b_3 = 1,\; b_4 = 2.
 \]
 
 \paragraph{Costruzione esplicita}
-Iniziamo con un array circolare \(r_0, r_1, \dots, r_{11}\) di lunghezza 12. Ogni nodo~\(i\) viene assegnato a \(b_i\) posizioni saltando di \(n=3\) slot a partire dall'ultima posizione occupata.
+Seguiamo l'algoritmo di costruzione esplicita dell'anello, come descritto nella sezione~\ref{subsubsec:costruzione-esplicita}. Iniziamo con un array circolare \(r_0, r_1, \dots, r_{11}\) di lunghezza 12. Ogni nodo~\(i\) viene assegnato a \(b_i\) posizioni saltando di \(n=3\) slot a partire dall'ultima posizione occupata.
 I posizionamenti risultano:
 \[
     \begin{array}{rl}
@@ -218,7 +222,8 @@ Di conseguenza otteniamo:
 È immediato verificare che in ogni finestra di lunghezza \(n=3\) compaiano nodi distinti e che ciascun nodo~\(i\) occupi esattamente \(b_i\) posizioni.
 
 \paragraph{Costruzione implicita}
-Per la costruzione implicita utilizziamo l'algoritmo che calcola direttamente il nodo responsabile di ogni posizione \(i\). Innanzitutto definiamo l'array delle somme prefisse
+Seguiamo ora l'algoritmo di costruzione implicita dell'anello, come descritto nella sezione~\ref{subsubsec:costruzione-implicita}.
+Innanzitutto definiamo l'array delle somme prefisse
 \[
     c_k = \sum_{j=0}^{k-1} b_j
 \]
@@ -267,6 +272,13 @@ Per leggere o scrivere una chiave, si seguono i seguenti passaggi:
 
 Se meno di \texttt{r} (o \texttt{w}) nodi rispondono con successo, l'operazione fallisce e il client riceve un errore.
 
+\subsubsection{Modello di consistenza}
+\label{subsubsec:modello-consistenza}
+
+Il sistema non garantisce alcun tipo di consistenza: non è presente alcun meccanismo di sincronizzazione tra i nodi. Se una scrittura non raggiunge un determinato nodo perché non disponibile, questo continuerà a restituire il valore precedente fino a quando non riceverà una nuova scrittura.
+
+È possibile rafforzare le garanzie di consistenza utilizzando la condizione $r + w > n$. In tal caso, si garantisce che almeno un nodo coinvolto nella lettura abbia ricevuto l'ultima scrittura, assicurando così letture più consistenti. Tuttavia, è responsabilità del client determinare quale tra i valori restituiti sia il più recente, poiché il sistema non fornisce timestamp né identificatori di versione.
+
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
 
@@ -307,7 +319,7 @@ def limit_throughput(table, operation):
 
 Per l'allocazione della banda, Kitsurai adotta un modello molto semplice: si assume che il numero massimo di operazioni al secondo eseguibili da una macchina sia fisso e indipendente da altri fattori come la dimensione delle letture e scritture in corso.
 
-Per questo motivo, a ciascun nodo è sufficiente conoscere la banda massima - misurata in precedenza utilizzando operazioni di dimensione standard - per determinare se sia in grado o meno di gestire il carico richiesto da una tabella.
+Per questo motivo, a ciascun nodo è sufficiente conoscere la banda massima - misurata in precedenza utilizzando operazioni di profilazione e dimensionamento standard - per determinare se sia in grado o meno di gestire il carico richiesto da una tabella.
 A tal fine, è necessario l'impiego di dischi SSD, in quanto garantiscono prestazioni costanti e prevedibili, a differenza degli HDD, soggetti a rallentamenti imprevedibili dovuti a operazioni di seek e latenza di accesso.
 
 \subsection{Remote Procedure Calls}
