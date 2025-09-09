@@ -6,7 +6,7 @@
 %    twoside
 ]{geometry}
 %\usepackage[utf8]{inputenc} % Input e Font
-\usepackage[italian]{babel}
+\usepackage[english]{babel}
 \usepackage{fontspec}
 \usepackage[T1]{fontenc}
 \usepackage{microtype}      % Better Paragraphs
@@ -43,7 +43,7 @@
     linkcolor=black,
     urlcolor=black,
     citecolor=black,
-    pdftitle={Kitsurai: un key-value store real-time distribuito in Rust},
+    pdftitle={Kitsurai: a distributed real-time key-value store in Rust},
     pdfpagemode=FullScreen,
 ]{hyperref}
 \usepackage{xurl}
@@ -77,15 +77,15 @@
 \definecolor{lightergray}{rgb}{0.95, 0.95, 0.95}
 
 %%% Document
-\title{Kitsurai: un key-value store real-time distribuito in Rust}
+\title{Kitsurai: a distributed real-time key-value store in Rust}
 \author{Filippo Casarin}
-\date{23 luglio 2025}
+\date{July 23, 2025}
 
 \addbibresource{sources.bib}
 \nocite{*}
 
 \begin{document}
-    \include{00-frontespizio/main}
+    \include{00-title-page/main}
 %    \newpage\shipout\null % Blank page
 %    \clearpage
 
@@ -95,13 +95,13 @@
     \raggedbottom\tableofcontents
     \pagebreak
 
-    \include{01-introduzione/main}
-    \include{02-architettura/main}
-    \include{03-risultati/main}
-    \include{04-conclusioni/main}
+    \include{01-introduction/main}
+    \include{02-architecture/main}
+    \include{03-results/main}
+    \include{04-conclusions/main}
     %\include{05-ringraziamenti/main}
 
     \phantomsection
-    \addcontentsline{toc}{section}{Bibliografia}
-    \printbibliography[title={Bibliografia}]
+    \addcontentsline{toc}{section}{Bibliography}
+    \printbibliography[title={Bibliography}]
 \end{document}

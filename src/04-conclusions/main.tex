@@ -1,0 +1,21 @@
+\section{Conclusions}
+\label{sec:conclusions}
+
+The \textit{Kitsurai} project was developed with the goal of creating a distributed key-value store capable of offering predictable and guaranteed performance in multi-tenant environments, a requirement often overlooked in major existing open-source solutions.
+
+The experimental results confirm the validity of the approach: the system manages to maintain controlled performance even under high load and in the presence of malicious clients, ensuring effective isolation between tenants and guaranteeing each a minimum share of bandwidth and an acceptable maximum latency.
+
+\subsection{Limitations}
+\label{subsec:limitations}
+
+Despite the promising results, the current implementation has some limitations that provide opportunities for future work. In particular, the system still lacks:
+
+\begin{itemize}
+    \item An access control model for fine-grained permission management.
+    \item A catch-up protocol for reintegrating nodes after prolonged outages.
+    \item Robust mechanisms for conflict resolution during read operations.
+    \item The ability for users to assign custom names to tables.
+    \item Strategies for optimal capacity management of nodes, especially when tables have unbalanced requirements in terms of bandwidth or storage space.
+    \item Support for dynamic addition and removal of nodes from the system.
+    \item A more performant and encrypted RPC protocol based on existing technologies, for example QUIC~\cite{QUIC}.
+\end{itemize}

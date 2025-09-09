@@ -1,0 +1,23 @@
+\section{Introduction}
+\label{sec:introduction}
+
+In recent years, replicated storage services in the field of \textit{Cloud Computing} have gained significant importance.
+In a context where applications must serve millions of users simultaneously, often geographically distributed, it becomes crucial to design systems capable of providing horizontal scalability, high availability, and fault tolerance.
+
+These properties must coexist with the need to keep response times low and ensure efficient resource management.
+Traditional data management systems based on relational models are often unsuitable for these new distributed scenarios.
+For this reason, modern architectures increasingly rely on \textit{NoSQL} solutions that, in exchange for simpler operations, offer lower overhead and better scalability compared to traditional \textit{SQL} databases.
+
+Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB} \cite{Dynamo2007}, which guarantee response times below 10~ms \cite{DynamoWhitepaper}.
+However, providing latency and performance guarantees in distributed and \textit{multi-tenant} environments proves extremely challenging.
+
+Major open-source solutions like \textit{MongoDB} \cite{Mongo} or \textit{Cassandra} \cite{Cassandra} adopt a \textit{best effort} approach, without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
+The \textit{multi-tenant} model, in which several customers share the same physical or virtual resources, introduces additional challenges in workload management and in guaranteeing minimum performance levels.
+In the absence of explicit isolation mechanisms, a particularly active \textit{tenant} can compromise the quality of service offered to others, making precise throughput control for each client essential.
+
+The \textit{Kitsurai} project is presented as a first attempt to create a \textit{key-value store} that is not only scalable and resilient, but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
+
+The project was developed in \textit{Rust}, a language chosen not only for its excellent performance but also for the memory safety model it provides.
+\textit{Rust} is known for delivering performance comparable to \textit{C++} while avoiding common classes of errors such as \textit{race conditions} or \textit{memory leaks}, making it particularly suitable for programming complex distributed systems.
+
+The following chapters analyze in detail the design choices, the system architecture, and the results obtained through empirical tests, with particular attention to throughput and latency guarantees for clients.
