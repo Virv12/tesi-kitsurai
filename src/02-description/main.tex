@@ -1,4 +1,4 @@
-\section{Architecture}
+\section{Description}
 \label{sec:architecture}
 
 The database is organized into \emph{tables}, each identified by a version~7 UUID~\cite{rfc9562}.
@@ -9,7 +9,7 @@ A \emph{node} corresponds to an instance of the program running on a physical or
 Each node can be tagged with a string identifying its \emph{Availability Zone} (see Section~\ref{subsec:availability-zones}).
 Every node maintains a copy of the metadata for all tables.
 
-\subsection{Interface}
+\subsection{Client API}
 \label{subsec:interface}
 
 Four main operations are supported:
@@ -205,17 +205,17 @@ The placements are:
 \[
     \begin{array}{rl}
         \text{Node }0\;(b_0=4): & r_{0\phantom{0}} = 0 \\
-                                & r_{3\phantom{0}} = 0 \\
-                                & r_{6\phantom{0}} = 0 \\
-                                & r_{9\phantom{0}} = 0 \\[0.5ex]
+        & r_{3\phantom{0}} = 0 \\
+        & r_{6\phantom{0}} = 0 \\
+        & r_{9\phantom{0}} = 0 \\[0.5ex]
         \text{Node }1\;(b_1=3): & r_{1\phantom{0}} = 1 \\
-                                & r_{4\phantom{0}} = 1 \\
-                                & r_{7\phantom{0}} = 1 \\[0.5ex]
+        & r_{4\phantom{0}} = 1 \\
+        & r_{7\phantom{0}} = 1 \\[0.5ex]
         \text{Node }2\;(b_2=2): & r_{10} = 2 \\
-                                & r_{2\phantom{0}} = 2 \\[0.5ex]
+        & r_{2\phantom{0}} = 2 \\[0.5ex]
         \text{Node }3\;(b_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
         \text{Node }4\;(b_4=2): & r_{8\phantom{0}} = 4 \\
-                                & r_{11} = 4
+        & r_{11} = 4
     \end{array}
 \]
 Consequently, we obtain:

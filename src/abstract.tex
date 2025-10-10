@@ -1,3 +1,15 @@
 \begin{abstract}
-In recent years, the widespread adoption of distributed cloud applications has introduced new challenges in the efficient and reliable management of data. Kitsurai is a real-time key-value store developed in Rust, designed to operate in highly concurrent multi-tenant environments with a focus on horizontal scalability, resilience, and predictable performance. The system implements a NoSQL model and introduces explicit throughput control for each table, ensuring a minimum level of service even under heavy load. Each table can be configured with parameters such as minimum guaranteed bandwidth, replication factor, and consistency levels (read/write concern). The use of Rust ensures high performance and memory safety, reducing the risk of common errors in distributed systems. Experimental results show the effectiveness of the proposed approach in guaranteeing isolation between tenants.
+    Kitsurai is a real-time key-value store developed in Rust,
+    designed to operate in highly concurrent multi-tenant environments with a focus on horizontal scalability,
+    resilience, and predictable performance.
+    The system implements a NoSQL model and introduces explicit throughput control for each table,
+    ensuring a minimum level of service even under heavy load.
+    Each table can be configured with parameters such as minimum guaranteed bandwidth, replication factor, and consistency levels (read/write concern).
+
+    % TODO: REVIEW THIS
+    Load distribution is handled through a circular hashing technique developed for this system requirements.
+    Kitsurai uses eventual consistency to further simplify its internal state, resulting in nodes with minimal RAM usage.
+
+    The use of Rust enabled high performance and memory safety with little effort, reducing the risk of common errors in distributed systems.
+    Experimental results show the effectiveness of the proposed approach in scalability and isolation between tenants.
 \end{abstract}
