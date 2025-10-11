@@ -1,149 +1,119 @@
-\section{Experimental results}
+\section{Experimental Results}
 \label{sec:results}
 
 Experimental data were collected using three machines:
 \begin{itemize}
-    \item \textbf{Machine A}: \textbf{Intel Core i7-8750H} (8th gen, 6 cores, 12 threads, up to 4{,}1~GHz), \textbf{16~GB DDR4 RAM}, SSD \textbf{SanDisk 128~GB SATA M.2} (\texttt{SD9SN8W128G1002}), operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{btrfs}.
-    \item \textbf{Machine B}: \textbf{Intel Core i7-12700H} (12th gen, 14 cores, 20 threads, up to 4{,}7~GHz), \textbf{16~GB DDR4 RAM}, \textbf{1~TB NVMe PCIe} SSD (\texttt{MTFDKBA1T0TFH-1BC1AABHA}), operating system \textbf{Ubuntu 22.04}, kernel \texttt{6.12.10}, file system \texttt{ext4}.
-    \item \textbf{Machine C}: \textbf{Intel Core i5-12450H} (12th gen, 8 cores, 12 threads, up to 4{,}4~GHz), \textbf{16~GB DDR4 RAM}, \textbf{512~GB NVMe PCIe} SSD (generic model \texttt{PCIe-8 SSD 512GB}), operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{xfs}.
+    \item Machine $M$: MacBook Pro with \textbf{M1} and \textbf{32~GB RAM}, built-in storage, operating system \textbf{macOS~26}, file system \texttt{APFS};
+    % TODO: Check locked frequency
+    \item Machine $A$: \textbf{Intel Core i7-8750H} (6 cores, 12 threads with HT, locked at 2.2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{128~GB SATA M.2} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{btrfs};
+    % TODO: Check locked frequency and PCIe lanes
+    \item Machine $H$: \textbf{Intel Core i5-12450H} (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at 1.5 and P-Cores at 2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{512~GB NVMe 8xPCIe3} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{xfs}.
 \end{itemize}
 
-The machines were connected via a gigabit Ethernet network with a latency of about 0{,}3~ms.
-They were configured with frequency scaling, turbo boost, and hyper-threading disabled to ensure consistent performance and reduce result variability.
+The machines were connected via a gigabit Ethernet network with a latency of about 0{,}3~ms while under stress.
 
-The graphs show the observed latency as the operation frequency varies, for different percentiles (from P0 to P100).
-Each test was run for a period of 20~seconds, with a frequency increasing from 1000~Hz until the system failed.
+A purpose made program \texttt{ktb} was developed to stress the system using multiple connections.
+We first recorded baseline values, by making each machine stress itself in both get and set operations
+on a table with disabled throttling (simply set to a high enough number) and value sizes of 4~kB\@.
 
-\subsection{\texttt{set} operation}
-\label{subsec:set-operation}
+Table~\ref{tab:results-stress} shows the results and allows us to rank the machine as follows: $H > M \approx A$.
 
-\begin{figure}[htbp]
+The scalability and replication of the system were then tested.
+The following tests will all be run from machine H unless stated otherwise and will take in consideration only set operations
+as get operations are cached by the OS making their results not correspond to system performance,
+nonetheless measured req/s for get operations are reported in the table~\ref{tab:results-stress}.
+We configured the machines with either a uniform distribution with each machine set to 1M req/s,
+or with a balanced distribution where bandwidth were set accordingly to the machines' self stress tests: M and A with 5M req/s and H with 10 M req/s.
+
+To test the distribution and scalability of the system, a table created with enough bandwidth to fill the test case, N=3, R=1 and W=1
+was used as it spreads the keys evenly across the three machines.
+We expect the system to provide, in the uniform case, about 3 times the rate of the slowest machine, and in the balanced case about the sum of the machines rate.
+% Spiegare meglio i conti?
+Testing shows that the system is able to scale and managed to get to 92\% and 83\% of the expected values.
+The losses can in part be accounted for by considering the CPU overhead of running the stress itself
+and the probabilistic nature of key distribution.
+
+%N=1000, p_i = 1/3
+%var = 1000 * 1/3 * 2/3 = 2/9 * 1000
+%stdev ~ 15
+%1 * stdev ~ 68% => 1 - 333/333+15 = 0,04310344828
+%0,9166666667
+
+%N=1000, p_1 = p_2 = 1/4, p_3 = 1/2
+%var_1,2 = 1000 * 1/4 * 3/4 = 3/16 * 1000
+%stdev_1,2 ~ 14
+%1 * stdev ~ 68% => 1 - 250/250+14 = 0,05303030303
+%var_3 = 1000 * 1/2 * 1/2 = 1/4 * 1000
+%stdev_3 ~ 16
+%1 * stdev ~ 68% => 1 - 500/500+16 = 0,03100775194
+%0,8252427184
+
+To test the replication of the system, a table created with enough bandwidth to fill the test case, N=2, R=2 and W=2
+was used as it allows for reproducible performance (N=R=W) and it was considered more interesting than a simpler (3, 3, 3) case.
+We expect the system to provide, in the uniform case, about $\frac32$ times the slowest machine,
+and in the balanced case about the sum of the two slowest machines.
+% Spiegare meglio i conti?
+Testing shows that the system is able to scale and managed to get to 100\% and 96\% of the expected values.
+The remaining 5\% cannot be accounted for solely by considering the CPU overhead of running the stress itself,
+but is due to the probabilistic nature of key distribution.
+
+%N=1000, p_1,2,3 = 2/3
+%var_1,2,3 = 1000 * 2/3 * 1/3 = 2/9 * 1000
+%stdev ~ 15
+%1 * stdev ~ 68% => 1 - 666/666+15 = 0,02202643172
+%1
+
+%N=1000, p_1,2 = 1/2, p_3=1
+%var_1,2 = 1000 * 1/2 * 1/2 = 1/4 * 1000
+%stdev ~ 16
+%1 * stdev ~ 68% => 1 - 500/500+16 = 0,031
+%var_3 = 0
+%0,9591836735
+
+
+\begin{table}
     \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-a}
-        \caption*{Machine A}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-c}
-        \caption*{Machine B}
-    \end{minipage}
+    \caption{TODO}
+    \label{tab:results-stress}
+    \begin{tabular}{lrrr}
+        \toprule
+        Test case               & get (512~B) & get (4~kB) & set (4~kB) \\
+        \midrule
+        Machine $M$ self stress &             & 64.0k      & 5.0k       \\
+        Machine $H$ self stress &             & 83.3k      & 10.8k      \\
+        Machine $A$ self stress &             & 56.6k      & 4.8k       \\
+        Uniform on (3, 1, 1)    & 102.0k      & 44.1k      & 13.2k      \\
+        Balanced on (3, 1, 1)   & 97.0k       & 56.5k      & 17.0k      \\
+        Uniform on (2, 2, 2)    & 67.3k       & 21.8k      & 7.2k       \\
+        Balanced on (2, 2, 2)   & 62.4k       & 28.0k      & 9.4k       \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-h}
-        \caption*{Machine C}
-    \end{minipage}
+% TODO
+%\footnote[1]{
+%    Limited by Gigabit speeds.
+%}
 
-    \caption{Write performance of the machines. Each graph shows, as the operation frequency [Hz] varies, the observed latency [ms] for different percentiles (from P0 to P100).}
-    \label{fig:bench-set}
-\end{figure}
+The last test focused on the real-time properties of the system, simulating a concrete use case.
+With a balanced bandwidth configuration, a table was created with bandwidth 200 req/s and N=3, R=3, W=3.
+Another table with unlimited bandwidth (1M req/s) and N=2, R=2, W=2 was created to represent outside interference.
+The system was successfully able to isolate the target table from the outside noise, guaranteeing the allocated 200 req/s.
+We also measured latencies when the target table is receiving less than 200 req/s with and without stress, as reported in table~\ref{tab:results-isolation}.
+Overall, there is a slight increase in latencies, which is to be expected as no latency control is explicitly implemented.
 
-\begin{figure}[htbp]
+\begin{table}
     \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-all}
-        \caption*{Keys uniformly distributed across the three machines}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-all-balance}
-        \caption*{Keys distributed across the three machines with balanced weights $6{:}10{:}10$}
-    \end{minipage}
-
-    \caption{Write performance with distributed keys. Each graph shows, as the operation frequency [Hz] varies, the observed latency [ms] for different percentiles (from P0 to P100).}
-    \label{fig:bench-set-all}
-\end{figure}
-
-Figure~\ref{fig:bench-set} shows the results obtained by the three machines during write (\texttt{set}) operations.
-During the tests, throughput throttling was disabled, allowing the maximum performance of each machine to be observed.
-The graphs show that machines A, B, and C reached maximum throughputs of $6{,}9\,{\times}\,10^3$, $11{,}3\,{\times}\,10^3$, and $10{,}3\,{\times}\,10^3$ operations per second, respectively.
-
-Figure~\ref{fig:bench-set-all} presents the results obtained by using the three machines together, with keys distributed among them without replication (parameters $n=1, r=1, w=1$).
-When keys were distributed uniformly (with all $b_i$ equal), a total throughput of $16{,}9\,{\times}\,10^3$ operations per second was achieved.
-Using a weighted distribution of keys with weights $6{:}10{:}10$, the total throughput rose to $18{,}8\,{\times}\,10^3$ operations per second, demonstrating the importance of the bandwidth allocation mechanism for optimizing performance in heterogeneous scenarios.
-Although the sum of the individual capacities is $28{,}6\,{\times}\,10^3$ operations per second, the observed value is lower.
-An increase in latency compared to running on a single machine is also observed; however, unlike the single-machine tests, latency remains roughly constant as the operation frequency increases.
-These effects are hypothesized to stem from the overhead introduced by communication and coordination among distributed nodes.
-
-\subsection{\texttt{get} operation}
-\label{subsec:get-operation}
-
-\begin{figure}[htbp]
-    \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-get-a}
-        \caption*{Machine A}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-get-c}
-        \caption*{Machine B}
-    \end{minipage}
-
-    \vspace{0.5cm}
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-get-h}
-        \caption*{Machine C}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-get-all}
-        \caption*{Keys uniformly distributed across the three machines}
-    \end{minipage}
-
-    \caption{Read performance of the machines. Each graph shows, as the operation frequency [Hz] varies, the observed latency [ms] for different percentiles (from P0 to P100).}
-    \label{fig:bench-get}
-\end{figure}
-
-Figure~\ref{fig:bench-get} shows the results obtained by the three machines during read (\texttt{get}) operations.
-Again, throughput throttling was disabled to observe maximum performance.
-Machines A, B, and C reached maximum throughputs of $25{,}6\,{\times}\,10^3$, $45{,}4\,{\times}\,10^3$, and $50{,}0\,{\times}\,10^3$ operations per second, respectively.
-
-Using the three machines together with keys uniformly distributed among them and without replication ($n=1, r=1, w=1$), a total throughput of $20{,}8\,{\times}\,10^3$ operations per second was achieved, lower than that of the individual machines.
-The cost of a disk read is much lower than that of a write thanks to the file system cache.
-This highlights the overhead of communication between machines, which negatively affects overall performance.
-It is hypothesized that using a database larger than the available RAM (thereby reducing cache effectiveness) could make multi-machine usage advantageous again.
-However, this hypothesis could not be directly verified.
-
-\subsection{Multitenant}
-\label{subsec:multitenant}
-
-\begin{figure}[htbp]
-    \centering
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-no-throttling}
-        \caption*{Without throughput throttling}
-    \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{03-results/bench-set-throttling}
-        \caption*{With throughput throttling}
-    \end{minipage}
-
-    \caption{Write performance of the machine with and without throughput throttling in the presence of malicious clients. Each graph shows, as the operation frequency [Hz] varies, the observed latency [ms] for different percentiles (from P0 to P100).}
-    \label{fig:bench-throttling}
-\end{figure}
-
-Figure~\ref{fig:bench-throttling} reports the results obtained by machine C during write operations in a multitenant context.
-During the test two tables, X and Y, were present, with bandwidths of 8000 and 1000 operations per second, and a malicious client attempting to saturate resources by writing to table Y.
-The malicious client consisted of two parts:
-\begin{itemize}
-    \item A component that launches 1000 tasks, each performing continuous writes to table Y, thus keeping 1000 concurrent operations always in progress.
-    \item A component that generates 4000 operations per second asynchronously, waiting in the background for each request to complete without blocking the main thread.
-\end{itemize}
-
-The graphs show the observed performance for table X, with and without throughput throttling (see Section~\ref{subsec:throughput-throttling}).
-Without throttling, the latency at the $50^\text{th}$ percentile starts around 180~ms and the maximum throughput reached is $5{,}2\,{\times}\,10^3$ operations per second, lower than the guaranteed value.
-With throttling enabled, instead, the latency at the $50^\text{th}$ percentile remains below 10~ms until the guaranteed maximum throughput of 8000 operations per second is reached.
+    \caption{TODO}
+    \label{tab:results-isolation}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        & Average ms & $P_{50}$ms & $P_{90}$ms & $P_{99}$ms & $P_{99.9}$ms \\
+        \midrule
+        Baseline on H        & 1.28       & 1.22       & 1.38       & 1.63       & 19.50        \\
+        Stressed on H        & 2.35       & 2.14       & 2.78       & 6.12       & 37.87        \\
+        Distributed Baseline & 4.18       & 3.22       & 6.75       & 16.09      & 37.55        \\
+        Distributed Stressed & 12.10      & 11.85      & 19.37      & 48.29      & 92.33        \\
+        \bottomrule
+    \end{tabular}
+\end{table}
