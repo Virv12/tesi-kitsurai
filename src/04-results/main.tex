@@ -1,6 +1,8 @@
 \section{Experimental Results}
 \label{sec:results}
 
+% TODO: Unify units
+
 Experimental data were collected using three machines:
 \begin{itemize}
     \item Machine $M$: MacBook Pro with \textbf{M1} and \textbf{32~GB RAM}, built-in storage, operating system \textbf{macOS~26}, file system \texttt{APFS};
@@ -12,26 +14,41 @@ Experimental data were collected using three machines:
 
 The machines were connected via a gigabit Ethernet network with a latency of about 0{,}3~ms while under stress.
 
-A purpose made program \texttt{ktb} was developed to stress the system using multiple connections.
-We first recorded baseline values, by making each machine stress itself in both get and set operations
-on a table with disabled throttling (simply set to a high enough number) and value sizes of 4~kB\@.
+A purpose-built program (\texttt{ktb}) was developed to stress the system using multiple connections.
+We first recorded baseline values by having each machine stress itself in both get and set operations
+on a table with throttling disabled (i.e., set to sufficiently high limit) and value sizes of 4~kB\@.
 
-Table~\ref{tab:results-stress} shows the results and allows us to rank the machine as follows: $H > M \approx A$.
+Table~\ref{tab:results-stress} presents the results, which allows us to rank the machine as follows: $H > M \approx A$.
 
 % TODO: Bandwidth o altra parola?
-The scalability and replication of the system were then tested.
-The following tests will all run \texttt{ktb} on machine H unless stated otherwise and will take in consideration only set operations.
-Get operations are not considered because as the OS caches file reads, their results not correspond to true random access disk performance,
-nonetheless measured req/s for get operations are reported in the table~\ref{tab:results-stress}.
-We configured the machines for either a uniform key distribution, where each machine's bandwidth parameter was set to the same sufficiently high value,
-or with a balanced key distribution, where each machine's bandwidth was still set sufficiently high but proportionally to the self stress results: $M$ and $A$ with the same value and $H$ with double that.
+The scalability and replication of the system were then evaluated.
+Unless stated otherwise, The following tests were conducted by running \texttt{ktb} on machine $H$, considering only set operations.
+Get operations were excluded because the operating system caches file reads, making their results unrepresentative of true random-access disk performance.
+Nevertheless, the measured req/s values for get operations are reported in Table~\ref{tab:results-stress}.
 
+We configured the machines for either a uniform key distribution, where each machine's bandwidth parameter was set to the same sufficiently high value,
+or with a proportional key distribution, where each machine's bandwidth was still set sufficiently high but proportional to its self-stress results.
+In our setup, for simplicity, machines $M$ and $A$ were assigned the same value, while $H$ was configured with twice that amount.
+
+\paragraph{Distribution}
 To test the key distribution and scalability of the system, we used a table configured
-with enough bandwidth to saturate the test case, with parameters $N=3$, $R=1$, and $W=1$.
-This configuration spreads requests across peers according to the machines' bandwidth proportions.
-We expect the system to provide, in the uniform case, about 3 times the rate of the slowest machine, and in the balanced case about the sum of the machines rate.
-% TODO Spiegare meglio i conti?
-Testing shows that the system is able to scale and managed to get to 92\% and 83\% of the expected values.
+with enough bandwidth to saturate the test case, $N=3$, $R=1$, and $W=1$.
+This configuration distributes requests across peers according to the machines' bandwidth proportions.
+
+
+In the uniform case, each machine receives one third of the requests.
+Thus, the slowest machine will be the first one to limit the number of requests.
+We can therefore expect the overall rate to be three times the minimum individual rate,
+as the other two machines will receive the same rate of request as the slowest one.
+In our setup, the slowest machine is $A$, which achieved 4.8k req/s, yielding and expected overall rate of 14.4k req/s.
+
+
+In the proportional case, as long as the machine bandwidth was configured correctly, no single machine should become a bottleneck.
+We can then expect the overall rate to be the sum of the individual machines.
+In our setup, this corresponds to 20.6k req/s.
+
+
+Testing shows that the system scales as expected, reaching 13.2k req/s (92\%) and 17.0k req/s (83\%) of the expected values.
 The losses can in part be accounted for by considering the CPU overhead of running the stress itself
 and the probabilistic nature of key distribution.
 
@@ -50,14 +67,25 @@ and the probabilistic nature of key distribution.
 %1 * stdev ~ 68% => 1 - 500/500+16 = 0,03100775194
 %0,8252427184
 
-To test the replication of the system, a table created with enough bandwidth to fill the test case, $N=2$, $R=2$ and $W=2$
-was used as it allows for reproducible performance ($N=R=W$) and it was considered more interesting than a simpler $N=3$, $R=3$ and $W=3$ case.
-We expect the system to provide, in the uniform case, about $\frac32$ times the slowest machine,
-and in the balanced case about the sum of the two slowest machines.
-% TODO Spiegare meglio i conti?
-Testing shows that the system is able to scale and managed to get to 100\% and 96\% of the expected values.
-The remaining 5\% cannot be accounted for solely by considering the CPU overhead of running the stress itself,
-but is due to the probabilistic nature of key distribution.
+\paragraph{Replication}
+To test the system replication, a table created with enough bandwidth to saturate the test case, $N=2$, $R=2$ and $W=2$ was used.
+This configuration allows for reproducible performance ($N=R=W$) and was considered more interesting than the simpler $N=3$, $R=3$ and $W=3$ case.
+
+
+In the uniform case, the slowest machine again limits the overall rate.
+Due to replication, each machine receives $2/3$ of the client requests, as the key space is distributed twice.
+Therefore, the expected overall rate is $3/2$ of the slowest machine rate, accounting for the remaining third that do not hit the slowest machine.
+In our case the total expected overall rate is 7.2k req/s.
+
+
+In the proportional case, our faster node $H$ receives a full copy of the table, while $M$ and $A$ each store half.
+We can expect the overall rate to be the minimum between $H$'s rate and the sum of $M$ and $A$'s rates.
+In our setup, $H$'s is faster than $M$ and $A$ combined, yielding an expected overall rate of 9.8k req/s.
+
+
+Testing confirms that the system scales as predicted, achieving 7.2k req/s (100\%) and 9.4k req/s (96\%) of the expected values.
+The remaining 5\% discrepancy cannot be explained solely by CPU overhead from the stress test,
+but it is due to the probabilistic nature of key distribution.
 
 %N=1000, p_1,2,3 = 2/3
 %var_1,2,3 = 1000 * 2/3 * 1/3 = 2/9 * 1000
@@ -76,33 +104,40 @@ but is due to the probabilistic nature of key distribution.
 \begin{table}
     \centering
     \caption{TODO}
+    % TODO: Introduce the tuple syntax for tables.
     \label{tab:results-stress}
     \begin{tabular}{lrrr}
         \toprule
-        Test case               & get (512~B) & get (4~kB) & set (4~kB) \\
+        Test case                 & get (512~B) & get (4~kB) & set (4~kB) \\
         \midrule
-        Machine $M$ self stress &             & 64.0k      & 5.0k       \\
-        Machine $H$ self stress &             & 83.3k      & 10.8k      \\
-        Machine $A$ self stress &             & 56.6k      & 4.8k       \\
-        Uniform on (3, 1, 1)    & 102.0k      & 44.1k      & 13.2k      \\
-        Balanced on (3, 1, 1)   & 97.0k       & 56.5k      & 17.0k      \\
-        Uniform on (2, 2, 2)    & 67.3k       & 21.8k      & 7.2k       \\
-        Balanced on (2, 2, 2)   & 62.4k       & 28.0k      & 9.4k       \\
+        Machine $M$ self stress   &             & 64.0k      & 5.0k       \\
+        Machine $H$ self stress   &             & 83.3k      & 10.8k      \\
+        Machine $A$ self stress   &             & 56.6k      & 4.8k       \\
+        Uniform on (3, 1, 1)      & 102.0k      & 44.1k      & 13.2k      \\
+        Proportional on (3, 1, 1) & 97.0k       & 56.5k      & 17.0k      \\
+        Uniform on (2, 2, 2)      & 67.3k       & 21.8k      & 7.2k       \\
+        Proportional on (2, 2, 2) & 62.4k       & 28.0k      & 9.4k       \\
         \bottomrule
     \end{tabular}
 \end{table}
+
 
 % TODO
 %\footnote[1]{
 %    Limited by Gigabit speeds.
 %}
 
-The last test focused on the real-time properties of the system, simulating a concrete use case.
-With a balanced bandwidth configuration, a table was created with a bandwidth of 200 req/s and $N=3$, $R=3$, $W=3$.
-To represent external interference, another table was created with sufficiently high bandwidth, $N=2$, $R=2$, and $W=2$.
-The system was successfully able to isolate the target table from the outside noise, guaranteeing the allocated 200 req/s.
-We also measured latencies when the target table is receiving less than 200 req/s with and without stress, as reported in table~\ref{tab:results-isolation}.
-Overall, there is a slight increase in latencies, which is to be expected as no explicit latency control is implemented.
+\paragraph{Real-Time}
+The last test focused on evaluating the real-time properties of the system, simulating a concrete use case.
+With a proportional bandwidth configuration, a table $T_T$ was created with a bandwidth of 200 req/s and $N=3$, $R=3$, $W=3$.
+To represent external interference, another table $T_O$ was created with sufficiently high bandwidth, $N=2$, $R=2$, and $W=2$.
+To stress the system, two extra instances of \texttt{ktb} were executed on machines $A$ and $M$, both targeting $T_O$.
+The reported data was collected from machine $H$'s \texttt{ktb} instance targeting $T_T$.
+
+The system successfully isolated the target table from the outside noise, maintaining the allocated throughput of 200 req/s.
+Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than 200 req/s,
+both with and without external stress.
+Overall, a slight increase in latency was observed, which is expected, as no explicit latency control mechanism is implemented.
 
 \begin{table}
     \centering
@@ -110,12 +145,13 @@ Overall, there is a slight increase in latencies, which is to be expected as no 
     \label{tab:results-isolation}
     \begin{tabular}{lrrrrrr}
         \toprule
-        & Average ms & $P_{50}$ms & $P_{90}$ms & $P_{99}$ms & $P_{99.9}$ms \\
+        & Average & $P_{50}$ & $P_{90}$ & $P_{99}$ & $P_{99.9}$ \\
         \midrule
-        Baseline on H        & 1.28       & 1.22       & 1.38       & 1.63       & 19.50        \\
-        Stressed on H        & 2.35       & 2.14       & 2.78       & 6.12       & 37.87        \\
-        Distributed Baseline & 4.18       & 3.22       & 6.75       & 16.09      & 37.55        \\
-        Distributed Stressed & 12.10      & 11.85      & 19.37      & 48.29      & 92.33        \\
+        Baseline on H   & 1.28    & 1.22     & 1.38     & 1.63     & 19.50      \\
+        Stressed on H   & 2.35    & 2.14     & 2.78     & 6.12     & 37.87      \\
+        Dist.\ Baseline & 4.18    & 3.22     & 6.75     & 16.09    & 37.55      \\
+        Dist.\ Stressed & 12.10   & 11.85    & 19.37    & 48.29    & 92.33      \\
         \bottomrule
     \end{tabular}
 \end{table}
+
