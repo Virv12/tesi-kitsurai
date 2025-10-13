@@ -5,9 +5,9 @@ Experimental data were collected using three machines:
 \begin{itemize}
     \item Machine $M$: MacBook Pro with \textbf{M1} and \textbf{32~GB RAM}, built-in storage, operating system \textbf{macOS~26}, file system \texttt{APFS};
     % TODO: Check locked frequency
-    \item Machine $A$: \textbf{Intel Core i7-8750H} (6 cores, 12 threads with HT, locked at 2.2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{128~GB SATA M.2} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{btrfs};
+    \item Machine $A$: \textbf{Intel Core i7-8750H} (6 cores, 12 threads with HT, locked at 2.2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{128~GB SATA M.2} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.17.1}, file system \texttt{btrfs};
     % TODO: Check locked frequency and PCIe lanes
-    \item Machine $H$: \textbf{Intel Core i5-12450H} (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at 1.5 and P-Cores at 2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{512~GB NVMe 8xPCIe3} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.15.6}, file system \texttt{xfs}.
+    \item Machine $H$: \textbf{Intel Core i5-12450H} (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at 1.5~GHz and P-Cores at 2~GHz), \textbf{16~GB DDR4 RAM}, \textbf{512~GB NVMe 8xPCIe3} SSD, operating system \textbf{Arch Linux}, kernel \texttt{6.17.1}, file system \texttt{xfs}.
 \end{itemize}
 
 The machines were connected via a gigabit Ethernet network with a latency of about 0{,}3~ms while under stress.
@@ -18,17 +18,19 @@ on a table with disabled throttling (simply set to a high enough number) and val
 
 Table~\ref{tab:results-stress} shows the results and allows us to rank the machine as follows: $H > M \approx A$.
 
+% TODO: Bandwidth o altra parola?
 The scalability and replication of the system were then tested.
-The following tests will all be run from machine H unless stated otherwise and will take in consideration only set operations
-as get operations are cached by the OS making their results not correspond to system performance,
+The following tests will all run \texttt{ktb} on machine H unless stated otherwise and will take in consideration only set operations.
+Get operations are not considered because as the OS caches file reads, their results not correspond to true random access disk performance,
 nonetheless measured req/s for get operations are reported in the table~\ref{tab:results-stress}.
-We configured the machines with either a uniform distribution with each machine set to 1M req/s,
-or with a balanced distribution where bandwidth were set accordingly to the machines' self stress tests: M and A with 5M req/s and H with 10 M req/s.
+We configured the machines for either a uniform key distribution, where each machine's bandwidth parameter was set to the same sufficiently high value,
+or with a balanced key distribution, where each machine's bandwidth was still set sufficiently high but proportionally to the self stress results: $M$ and $A$ with the same value and $H$ with double that.
 
-To test the distribution and scalability of the system, a table created with enough bandwidth to fill the test case, N=3, R=1 and W=1
-was used as it spreads the keys evenly across the three machines.
+To test the key distribution and scalability of the system, we used a table configured
+with enough bandwidth to saturate the test case, with parameters $N=3$, $R=1$, and $W=1$.
+This configuration spreads requests across peers according to the machines' bandwidth proportions.
 We expect the system to provide, in the uniform case, about 3 times the rate of the slowest machine, and in the balanced case about the sum of the machines rate.
-% Spiegare meglio i conti?
+% TODO Spiegare meglio i conti?
 Testing shows that the system is able to scale and managed to get to 92\% and 83\% of the expected values.
 The losses can in part be accounted for by considering the CPU overhead of running the stress itself
 and the probabilistic nature of key distribution.
@@ -48,11 +50,11 @@ and the probabilistic nature of key distribution.
 %1 * stdev ~ 68% => 1 - 500/500+16 = 0,03100775194
 %0,8252427184
 
-To test the replication of the system, a table created with enough bandwidth to fill the test case, N=2, R=2 and W=2
-was used as it allows for reproducible performance (N=R=W) and it was considered more interesting than a simpler (3, 3, 3) case.
+To test the replication of the system, a table created with enough bandwidth to fill the test case, $N=2$, $R=2$ and $W=2$
+was used as it allows for reproducible performance ($N=R=W$) and it was considered more interesting than a simpler $N=3$, $R=3$ and $W=3$ case.
 We expect the system to provide, in the uniform case, about $\frac32$ times the slowest machine,
 and in the balanced case about the sum of the two slowest machines.
-% Spiegare meglio i conti?
+% TODO Spiegare meglio i conti?
 Testing shows that the system is able to scale and managed to get to 100\% and 96\% of the expected values.
 The remaining 5\% cannot be accounted for solely by considering the CPU overhead of running the stress itself,
 but is due to the probabilistic nature of key distribution.
@@ -96,11 +98,11 @@ but is due to the probabilistic nature of key distribution.
 %}
 
 The last test focused on the real-time properties of the system, simulating a concrete use case.
-With a balanced bandwidth configuration, a table was created with bandwidth 200 req/s and N=3, R=3, W=3.
-Another table with unlimited bandwidth (1M req/s) and N=2, R=2, W=2 was created to represent outside interference.
+With a balanced bandwidth configuration, a table was created with a bandwidth of 200 req/s and $N=3$, $R=3$, $W=3$.
+To represent external interference, another table was created with sufficiently high bandwidth, $N=2$, $R=2$, and $W=2$.
 The system was successfully able to isolate the target table from the outside noise, guaranteeing the allocated 200 req/s.
 We also measured latencies when the target table is receiving less than 200 req/s with and without stress, as reported in table~\ref{tab:results-isolation}.
-Overall, there is a slight increase in latencies, which is to be expected as no latency control is explicitly implemented.
+Overall, there is a slight increase in latencies, which is to be expected as no explicit latency control is implemented.
 
 \begin{table}
     \centering
