@@ -1,371 +1,99 @@
 \section{Description}
 \label{sec:architecture}
 
-%The database is organized into \emph{tables}, each identified by a version~7 UUID~\cite{rfc9562}.
-%Every table contains key-value pairs, where both keys and values are byte arrays.
-%
-%A Kitsurai system operates on a \emph{cluster} composed of a static set of nodes, which may occasionally be unavailable.
-%A \emph{node} corresponds to an instance of the program running on a physical or virtual machine.
-%Each node can be tagged with a string identifying its \emph{Availability Zone} (see Section~\ref{subsec:availability-zones}).
-%Every node maintains a copy of the metadata for all tables.
-%
-%\subsection{Client API}
-%\label{subsec:interface}
-%
-%Four main operations are supported:
-%\begin{itemize}
-%    \item \texttt{create-table}: creates a new table with the specified parameters.
-%    \item \texttt{delete-table}: deletes an existing table.
-%    \item \texttt{get}: retrieves the value associated with a key in a table.
-%    \item \texttt{set}: sets the value associated with a key in a table.
-%\end{itemize}
-%
-%Any of these requests can be sent to a node chosen by the client, which acts as a \emph{router} to forward the request to the nodes responsible for the specified table.
-%
-%\subsection{Tables}
-%\label{subsec:tables}
-%
-%Each table has four parameters specified by the user at creation time:
-%\begin{itemize}
-%    \item \texttt{bandwidth} or \texttt{b}: the total number of requests (\texttt{get} and \texttt{set}) that the system must guarantee for the table, expressed in requests per second.
-%    \item \texttt{n}: the replication factor for each key-value pair.
-%    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes that must successfully respond to a read request.
-%    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes that must successfully respond to a write request.
-%\end{itemize}
-%
-%And another four parameters computed automatically:
-%\begin{itemize}
-%    \item \texttt{id}: a UUIDv7 identifying the table, generated at creation.
-%    \item $\Sigma$: the effective bandwidth of the table considering the replication effect, computed as $\displaystyle \Sigma = b \cdot n$.
-%    \item \texttt{responsible\_nodes}: the list of nodes on which the table's key-value pairs are distributed, chosen to guarantee replication and data availability.
-%    \item $b_i$: the bandwidth allocated by node $i$ for the table, such that $\displaystyle \sum b_i = \Sigma$.
-%\end{itemize}
-%
-%Each table is managed by a set of nodes, called \emph{responsible nodes}, chosen to guarantee replication and data availability.
-%On each node, a table can be in one of three states: \emph{prepared}, \emph{created}, or \emph{deleted}.
-%Tables can only progress in state in the order: \emph{prepared} $\rightarrow$ \emph{created} $\rightarrow$ \emph{deleted}.
-%A table is \emph{prepared} when the requested bandwidth has been allocated, but it has not yet been created.
-%A table is considered \emph{created} when all responsible nodes consider it so; it is considered \emph{deleted} when at least one node marks it as such.
-%The state of a table is synchronized among nodes through the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}).
-%
-%\subsubsection{Creation and Deletion}
-%\label{subsubsec:creation-deletion}
-%
-%To create a table, the following steps are performed:
-%\begin{enumerate}
-%    \item The client connects to a node of its choice (called the \emph{router}) and sends the table's parameters \texttt{b}, \texttt{n}, \texttt{r}, and \texttt{w}.
-%    \item The router generates an \texttt{id} for the table and computes the effective bandwidth $\Sigma = b \cdot n$ to account for replication.
-%    \item The router requests the available bandwidth for the new table from the other nodes, allocating up to $b$ on a single node, thus ensuring that the table is replicated exactly $n$ times.
-%    If a node is unavailable it is skipped, while a responding node marks the table as \emph{prepared}.
-%    \item Once sufficient bandwidth is obtained (at least $\Sigma$), the router defines the list of responsible nodes and their respective quotas $b_i$.
-%    \item The router asks the nodes that responded in step~3 to execute the \texttt{commit} of the table; on these nodes the table enters the \emph{created} state.
-%    \item If all \texttt{commit} requests succeed, the creation succeeds and the router returns the \texttt{id} of the new table to the client; otherwise, creation fails and the router returns an error.
-%\end{enumerate}
-%
-%If a node receives a preparation request for a new table but does not receive a \texttt{commit} within a certain timeout, it will mark the table as \emph{deleted}.
-%This ensures that, in case of errors during creation, the table does not remain in an undefined state that would entail a loss of allocated bandwidth.
-%
-%To delete a table, it is sufficient for a node to mark it as \emph{deleted}; subsequently, thanks to the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}), the other nodes will synchronize and the table will be considered deleted by all.
-%
-%\subsubsection{Metadata}
-%\label{subsubsec:metadata}
-%
-%The database contains a special table, not accessible to users, identified by a UUIDv8 generated from the 16 bytes \texttt{kitsuraimetadata}.
-%This table contains the metadata of all tables created in the cluster, including their parameters and responsible nodes.
-%Thanks to this, every node can act as a router for \texttt{get} and \texttt{set} requests.
-%The metadata table, identified by a UUIDv8, cannot conflict with the UUIDv7 generated for user tables, since the version is encoded within a UUID\@.
-%
-%\subsection{Gossip}
-%\label{subsec:gossip}
-%
-%Each node in the cluster initiates a \emph{gossip} exchange with a randomly chosen peer every second.
-%During the exchange, the two nodes synchronize the metadata of \emph{created} and \emph{deleted} tables, but not those \emph{in preparation}.
-%If the same table is in different states on two nodes, the state representing greater progress prevails.
-%Using a Merkle tree~\cite{MerkleTree} allows nodes to quickly identify divergent tables and synchronize only those.
-%If the peer is unavailable, the exchange fails.
-%Gossip enables the system to reach metadata consistency among nodes even in the presence of offline nodes or network errors.
-%
-%\subsection{Replication Ring}
-%\label{subsec:replication-ring}
-%
-%To ensure database availability, we want every key to be replicated across multiple nodes while satisfying the following requirements:
-%
-%\begin{itemize}
-%    \item Each key is replicated on \texttt{n} distinct nodes among those responsible for the table, to guarantee availability and tolerate up to $n-1$ node failures.
-%    \item The bandwidth allocated to a table must be proportionally balanced among the nodes responsible for it.
-%\end{itemize}
-%
-%To define the ring we require the values $b_i$ to be integers.
-%If greater precision is needed when expressing the allocated bandwidth, a smaller unit (e.g., requests per millisecond) can be used, and the $b_i$ values can be multiplied by a scaling factor, e.g., 1000, to obtain integer values.
-%The \emph{replication ring} is a circular array of size $\Sigma$.
-%For each position in the ring we assign a node $i$ such that:
-%
-%\begin{itemize}
-%    \item Every interval of length $n$ in the ring contains distinct nodes.
-%    \item Each node $i$ occupies exactly $b_i$ positions in the ring.
-%\end{itemize}
-%
-%Given a key, we compute its hash (using \texttt{XXH3}\footnote{\url{https://xxhash.com}}, a fast non-cryptographic hash algorithm) and find the corresponding position in the ring.
-%The key is assigned to the \texttt{n} nodes immediately following the calculated position.
-%If the properties of the ring are satisfied, the availability and bandwidth balancing requirements are met.
-%
-%\subsubsection{Explicit construction}
-%\label{subsubsec:explicit-construction}
-%
-%Nodes are assigned to the ring iteratively, starting from the first node.
-%Each node is assigned to $b_i$ positions, proceeding from the last position assigned to the previous node (or from an arbitrary position for the first node) and occupying one position every $n$.
-%If that position is already taken by another node, we skip to the next; it is guaranteed that it will never be necessary to skip two consecutive positions.
-%Since each node has bandwidth $b_i \leq b$, and the ring has size $\Sigma = b \cdot n$, it is guaranteed that every node can be assigned to $b_i$ positions without completing a full cycle of the ring, so all positions are at least $n$ slots apart.
-%Therefore, this construction satisfies the properties described above for the \emph{replication ring}.
-%
-%\begin{samepage}
-%    \noindent In pseudocode, the construction of the ring can be represented as follows:
-%    \begin{minted}{python}
-%def build_ring(table):
-%    sigma = table.bandwidth * table.n
-%    ring = [None] * sigma
-%    current_position = 0
-%
-%    for node in table.responsible_nodes:
-%        for _ in range(table.bandwidth[node]):
-%            if ring[current_position] is not None:
-%                current_position = (current_position + 1) % sigma
-%            ring[current_position] = node
-%            current_position = (current_position + table.n) % sigma
-%
-%    return ring
-%    \end{minted}
-%\end{samepage}
-%
-%This construction requires $O(\Sigma)$ time and space.
-%
-%\subsubsection{Implicit construction}
-%\label{subsubsec:implicit-construction}
-%
-%Since the allocated bandwidth can be considerably high, explicitly constructing a ring that meets the criteria may be expensive.
-%To avoid this, we look for an algorithm that directly computes the node assigned to a position $i$ in the ring.
-%Let $o_i$ be the iteration at which the $i$-th position is assigned.
-%We observe that the explicit construction assigns nodes in the following order: first the multiples of $n$ in increasing order, then the numbers congruent to $1$ modulo $n$ in increasing order, then the numbers congruent to $2$ modulo $n$, and so on up to $n-1$.
-%It follows that $\displaystyle o_i = \left\lfloor \frac{i}{n} \right\rfloor + (i \bmod n) \cdot b$.
-%Now we need to find the $o_i$-th assigned node, i.e., the first node $x$ such that $\displaystyle \sum_{j=0}^{x} b_j > o_i$.
-%
-%In pseudocode, the algorithm to find the node assigned to a position $i$ in the ring can be represented as follows:
-%\begin{minted}{python}
-%def get_node_at_position(table, i):
-%    n = table.n
-%    b = table.bandwidth
-%    o_i = (i // n) + (i % n) * b
-%
-%    sum = 0
-%    for node in table.responsible_nodes:
-%        sum += node.bandwidth
-%        if sum > o_i:
-%            return node
-%
-%    # TODO: Return something here too?
-%\end{minted}
-%
-%We can therefore compute the node assigned to a position $i$ in the ring in time linear in the number of responsible nodes and constant memory, without explicitly building the ring.
-%
-%The algorithm can be further optimized using a binary search on the prefix sums of $b_i$, assuming they are already computed and stored.
-%In this case the algorithm runs in logarithmic time with respect to the number of responsible nodes, requiring linear memory for the prefix sums.
-%
-%\subsubsection{Existence conditions}
-%\label{subsubsec:existence-conditions}
-%
-%As shown, if each node satisfies the condition $b_i \leq b$ (as guaranteed during table creation), then the replication ring exists and can be constructed.
-%
-%Since the ring size is $\Sigma = b \cdot n$, we might try to build the ring even if a node has bandwidth $b < b_k \leq \Sigma$.
-%However, under these conditions the ring cannot exist: it is not possible to assign keys so that they simultaneously satisfy the replication and bandwidth constraints.
-%
-%For contradiction, suppose a node $k$ has bandwidth $b_k > b$.
-%Then that node would contain $\displaystyle n \cdot \frac{b_k}{\Sigma} = \frac{b_k}{b} > 1$ of the total keys, which is absurd.
-%
-%This shows that the conditions imposed during table creation are \emph{necessary and sufficient} for the correct operation of the system.
-%
-%\subsubsection{Example}
-%\label{subsubsec:ring-example}
-%
-%Below we provide a concrete example of ring construction for a table with parameters:
-%\[
-%    n = 3,\quad
-%    b = 4,\quad
-%    \Sigma = b \cdot n = 12,
-%\]
-%and five nodes with bandwidth allocated for the table:
-%\[
-%    b_0 = 4,\; b_1 = 3,\; b_2 = 2,\; b_3 = 1,\; b_4 = 2.
-%\]
-%
-%\paragraph{Explicit construction}
-%We follow the explicit ring construction algorithm described in Section~\ref{subsubsec:explicit-construction}.
-%We start with a circular array \(r_0, r_1, \dots, r_{11}\) of length 12.
-%Each node \(i\) is assigned to \(b_i\) positions, jumping \(n=3\) slots from the last occupied position.
-%The placements are:
-%\[
-%    \begin{array}{rl}
-%        \text{Node }0\;(b_0=4): & r_{0\phantom{0}} = 0 \\
-%        & r_{3\phantom{0}} = 0 \\
-%        & r_{6\phantom{0}} = 0 \\
-%        & r_{9\phantom{0}} = 0 \\[0.5ex]
-%        \text{Node }1\;(b_1=3): & r_{1\phantom{0}} = 1 \\
-%        & r_{4\phantom{0}} = 1 \\
-%        & r_{7\phantom{0}} = 1 \\[0.5ex]
-%        \text{Node }2\;(b_2=2): & r_{10} = 2 \\
-%        & r_{2\phantom{0}} = 2 \\[0.5ex]
-%        \text{Node }3\;(b_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
-%        \text{Node }4\;(b_4=2): & r_{8\phantom{0}} = 4 \\
-%        & r_{11} = 4
-%    \end{array}
-%\]
-%Consequently, we obtain:
-%\[
-%    \begin{array}{c|cccccccccccc}
-%        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
-%        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2  & 4
-%    \end{array}
-%\]
-%It is easy to verify that every window of length \(n=3\) contains distinct nodes and that each node \(i\) occupies exactly \(b_i\) positions.
-%
-%\paragraph{Implicit construction}
-%We now follow the implicit ring construction algorithm described in Section~\ref{subsubsec:implicit-construction}.
-%First we define the prefix sum array
-%\[
-%    c_k = \sum_{j=0}^{k-1} b_j,
-%\]
-%i.e.,
-%\[
-%    \begin{array}{c|cccccc}
-%        k   & 0 & 1 & 2 & 3 &  4 &  5 \\ \hline
-%        b_k & 4 & 3 & 2 & 1 &  2 &    \\ \hline
-%        c_k & 0 & 4 & 7 & 9 & 10 & 12
-%    \end{array}
-%\]
-%We then compute
-%\[
-%    o_i = \Bigl\lfloor \frac{i}{n} \Bigr\rfloor + (i \bmod n) \cdot b.
-%\]
-%For example, for \(i = 5\):
-%\[
-%    o_5 = \Bigl\lfloor \tfrac{5}{3} \Bigr\rfloor + (5 \bmod 3) \cdot 4 = 1 + 2\cdot4 = 9.
-%\]
-%We then look for \(k\) such that
-%\[
-%    c_k \le o_5 < c_{k+1},
-%\]
-%finding \(c_3 = 9 \le 9 < c_4 = 10\), hence the responsible node at \(i=5\) is node~3.
-%Repeating for all \(i=0,\dots,11\) we obtain:
-%\[
-%    \begin{array}{c|cccccccccccc}
-%        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
-%        o_i & 0 & 4 & 8 & 1 & 5 & 9 & 2 & 6 & 10 & 3 & 7 & 11 \\ \hline
-%        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2 & 4
-%    \end{array}
-%\]
-%In this way we reconstruct the ring without explicitly allocating an array of size \(\Sigma\).
-%
-%\subsection{\texttt{get} and \texttt{set} operations}
-%\label{subsec:get-set}
-%
-%To read or write a key, the following steps are performed:
-%\begin{enumerate}
-%    \item The client connects to a node of its choice (the \emph{router}) and sends the key and the value (in case of a write).
-%    \item The router computes the hash of the key and determines the \texttt{n} responsible nodes for that key.
-%    \item The router sends the read or write request to the responsible nodes.
-%    \item The nodes respond with the requested value or confirm the write.
-%    \item The router aggregates the responses and returns the first \texttt{r} (or \texttt{w}) available results to the client.
-%\end{enumerate}
-%
-%If fewer than \texttt{r} (or \texttt{w}) nodes respond successfully, the operation fails and the client receives an error.
-%
-%\subsubsection{Consistency model}
-%\label{subsubsec:consistency-model}
-%
-%The system does not guarantee any form of consistency: there is no synchronization mechanism among nodes.
-%If a write does not reach a node because it is unavailable, that node will continue to return the previous value until it receives a new write.
-%
-%Consistency guarantees can be strengthened by using the condition $r + w > n$.
-%In that case, at least one node involved in the read will have received the latest write, thus ensuring more consistent reads.
-%However, it is the client's responsibility to determine which of the returned values is the most recent, since the system does not provide timestamps or version identifiers.
-%
-%\subsection{Availability Zones}
-%\label{subsec:availability-zones}
-%
-%To ensure database availability, each node can be tagged with a string identifying its \emph{Availability Zone} (\texttt{AZ}).
-%Two nodes belonging to the same \texttt{AZ} cannot be chosen to replicate the same key.
-%To ensure that keys are replicated in a way that keeps them available even in case of an entire \texttt{AZ} failure, we modify the key distribution algorithm:
-%\begin{itemize}
-%    \item during table creation, the router must not allocate more than \texttt{b} bandwidth from nodes in the same \texttt{AZ};
-%    \item nodes must be assigned to the ring in order of \texttt{AZ}, so that an interval of length \texttt{n} in the ring contains nodes belonging to distinct \texttt{AZ}s.
-%\end{itemize}
-%
-%\subsection{Throughput throttling}
-%\label{subsec:throughput-throttling}
-%
-%In a multi-tenant system such as Kitsurai, it is necessary to prevent a single client from monopolizing resources and compromising the performance of others.
-%For this reason, Kitsurai implements a throughput throttling mechanism that guarantees each client the bandwidth requested at table creation, even in the presence of high and concurrent loads.
-%
-%Each node in the cluster maintains, for each table, a variable \texttt{sched\_at} that indicates when the node will be available again to execute new operations on that table.
-%When a client sends a read or write request, the node waits until \texttt{sched\_at} before executing the operation, then increments \texttt{sched\_at} by an interval equal to $\displaystyle \frac{1}{b}$, where $b$ represents the requested bandwidth for the table.
-%If \texttt{sched\_at} is already in the past, the system could execute uncontrolled operations until \texttt{sched\_at} catches up with the current time; to avoid this, if \texttt{sched\_at} is already in the past, it is updated to 100 ms before the current time, thus allowing a short controlled burst of operations.
-%
-%\begin{samepage}
-%    \noindent In pseudocode, throughput throttling can be represented as follows:
-%    \begin{minted}{python}
-%def limit_throughput(table, operation):
-%    current_time = get_current_time()
-%    if table.sched_at > current_time - 0.1:
-%        table.sched_at = current_time - 0.1
-%    run_at = table.sched_at
-%    table.sched_at += 1 / table.bandwidth
-%    wait_until(run_at)
-%    execute_operation(operation)
-%    \end{minted}
-%\end{samepage}
-%
-%\subsection{Bandwidth allocation}
-%\label{subsec:bandwidth-allocation}
-%
-%For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that the maximum number of operations per second a machine can execute is fixed and independent of other factors such as the size of ongoing reads and writes.
-%
-%For this reason, each node only needs to know its maximum bandwidth---measured beforehand using standard profiling and sizing operations---to determine whether it is able to handle the load requested by a table.
-%For this purpose, SSD disks must be used, as they provide constant and predictable performance, unlike HDDs, which are subject to unpredictable slowdowns due to seek operations and access latency.
-%
-%\subsection{Remote Procedure Calls}
-%\label{subsec:rpc}
-%
-%Kitsurai uses a Remote Procedure Call (RPC) protocol for communication between cluster nodes.
-%An RPC request occurs over a TCP connection between two nodes; the sending node uses an existing connection if available, otherwise it opens a new one.
-%RPC requests and responses are serialized in a \emph{length-prefixed} format, which allows sending a prefix containing the length of the request or response followed by the serialized data.
-%Once the request is completed, the TCP connection is kept open and made available for further RPC requests, reducing the cost of opening and closing connections.
-%
-%In pseudocode, an RPC request can be represented as follows:
-%\begin{minted}{python}
-%def rpc_request(node, request):
-%    connection = node.get_open_connection()
-%    if connection is None:
-%        connection = node.open_new_connection()
-%
-%    serialized_request = serialize(request)
-%    connection.send(int_to_bytes(len(serialized_request), 8))
-%    connection.send(serialized_request)
-%
-%    response_length = int_from_bytes(connection.recv(8))
-%    response_data = connection.recv(response_length)
-%    node.put_open_connection(connection)
-%
-%    return deserialize(response_data)
-%\end{minted}
-%
-%\subsection{Libraries}
-%\label{subsec:libraries}
-%
-%Kitsurai uses several libraries to implement the system's features; the most relevant are:
-%\begin{itemize}
-%    \item \texttt{tokio}\footnote{\url{https://tokio.rs/}}: concurrency management and asynchronous operations.
-%    \item \texttt{axum}\footnote{\url{https://crates.io/crates/axum}}: HTTP request handling and web server creation.
-%    \item \texttt{serde}\footnote{\url{https://serde.rs/}} and \texttt{postcard}\footnote{\url{https://crates.io/crates/postcard}}: data serialization and deserialization in RPC requests and responses.
-%    \item \texttt{uuid}\footnote{\url{https://crates.io/crates/uuid}}: generation and management of table UUIDs.
-%    \item \texttt{xxhash-rust}\footnote{\url{https://crates.io/crates/xxhash-rust}}: computation of key hashes using the \texttt{XXH3} algorithm.
-%    \item \texttt{clap}\footnote{\url{https://crates.io/crates/clap}}: command-line and configuration parameter management.
-%\end{itemize}
+%# Descrizione
+%> Copiando da un paper di Cucinotta, qui descriverei solo il modello di cluster 
+%    e l'API di ogni nodo sia per i client che per nodi.
+%
+%**No coordinazione.**
+%Altre varie assunzioni:
+%- Modello di cluster (possono esplodere per tempo finito).
+%- Modello di banda.
+%- No Consistenza: si fa con un layer aggiuntivo
+%- API client + tabelle senza nome
+
+The database is organized into \emph{tables}, each identified by a version~7 UUID~\cite{rfc9562}.
+Every table contains key-value pairs, where both keys and values are byte arrays.
+
+A Kitsurai system operates on a \emph{cluster} composed of a static set of nodes, which may occasionally be unavailable.
+A \emph{node} corresponds to an instance of the program running on a physical or virtual machine.
+Each node can be tagged with a string identifying its \emph{Availability Zone} (see Section~\ref{subsec:availability-zones}).
+Every node maintains a copy of the metadata for all tables.
+
+\subsection{Client API}
+\label{subsec:interface}
+
+Four main operations are supported:
+\begin{itemize}
+    \item \texttt{create-table}: creates a new table with the specified parameters.
+    \item \texttt{delete-table}: deletes an existing table.
+    \item \texttt{get}: retrieves the value associated with a key in a table.
+    \item \texttt{set}: sets the value associated with a key in a table.
+\end{itemize}
+
+Any of these requests can be sent to a node chosen by the client, which acts as a \emph{router} to forward the request to the nodes responsible for the specified table.
+
+\subsection{Tables}
+\label{subsec:tables}
+
+Each table has four parameters specified by the user at creation time:
+\begin{itemize}
+    \item \texttt{bandwidth} or \texttt{b}: the total number of requests (\texttt{get} and \texttt{set}) that the system must guarantee for the table, expressed in requests per second.
+    \item \texttt{n}: the replication factor for each key-value pair.
+    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes that must successfully respond to a read request.
+    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes that must successfully respond to a write request.
+\end{itemize}
+
+And another four parameters computed automatically:
+\begin{itemize}
+    \item \texttt{id}: a UUIDv7 identifying the table, generated at creation.
+    \item $\Sigma$: the effective bandwidth of the table considering the replication effect, computed as $\displaystyle \Sigma = b \cdot n$.
+    \item \texttt{responsible\_nodes}: the list of nodes on which the table's key-value pairs are distributed, chosen to guarantee replication and data availability.
+    \item $b_i$: the bandwidth allocated by node $i$ for the table, such that $\displaystyle \sum b_i = \Sigma$.
+\end{itemize}
+
+Each table is managed by a set of nodes, called \emph{responsible nodes}, chosen to guarantee replication and data availability.
+On each node, a table can be in one of three states: \emph{prepared}, \emph{created}, or \emph{deleted}.
+Tables can only progress in state in the order: \emph{prepared} $\rightarrow$ \emph{created} $\rightarrow$ \emph{deleted}.
+A table is \emph{prepared} when the requested bandwidth has been allocated, but it has not yet been created.
+A table is considered \emph{created} when all responsible nodes consider it so; it is considered \emph{deleted} when at least one node marks it as such.
+The state of a table is synchronized among nodes through the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}).
+
+\subsection{Consistency model}
+\label{subsec:consistency-model}
+
+The system does not guarantee any form of consistency: there is no synchronization mechanism among nodes.
+If a write does not reach a node because it is unavailable, that node will continue to return the previous value until it receives a new write.
+
+Consistency guarantees can be strengthened by using the condition $r + w > n$.
+In that case, at least one node involved in the read will have received the latest write, thus ensuring more consistent reads.
+However, it is the client's responsibility to determine which of the returned values is the most recent, since the system does not provide timestamps or version identifiers.
+
+\subsection{Availability Zones}
+\label{subsec:availability-zones}
+
+To ensure database availability, each node can be tagged with a string identifying its \emph{Availability Zone} (\texttt{AZ}).
+Two nodes belonging to the same \texttt{AZ} cannot be chosen to replicate the same key.
+To ensure that keys are replicated in a way that keeps them available even in case of an entire \texttt{AZ} failure, we modify the key distribution algorithm:
+\begin{itemize}
+    \item during table creation, the router must not allocate more than \texttt{b} bandwidth from nodes in the same \texttt{AZ};
+    \item nodes must be assigned to the ring in order of \texttt{AZ}, so that an interval of length \texttt{n} in the ring contains nodes belonging to distinct \texttt{AZ}s.
+\end{itemize}
+
+\subsection{Throughput throttling}
+\label{subsec:throughput-throttling}
+
+In a multi-tenant system such as Kitsurai, it is necessary to prevent a single client from monopolizing resources and compromising the performance of others.
+For this reason, Kitsurai implements a throughput throttling mechanism that guarantees each client the bandwidth requested at table creation, even in the presence of high and concurrent loads.
+
+Each node in the cluster maintains, for each table, a variable \texttt{sched\_at} that indicates when the node will be available again to execute new operations on that table.
+When a client sends a read or write request, the node waits until \texttt{sched\_at} before executing the operation, then increments \texttt{sched\_at} by an interval equal to $\displaystyle \frac{1}{b}$, where $b$ represents the requested bandwidth for the table.
+If \texttt{sched\_at} is already in the past, the system could execute uncontrolled operations until \texttt{sched\_at} catches up with the current time; to avoid this, if \texttt{sched\_at} is already in the past, it is updated to 100 ms before the current time, thus allowing a short controlled burst of operations.
+
+\subsection{Bandwidth allocation}
+\label{subsec:bandwidth-allocation}
+
+For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that the maximum number of operations per second a machine can execute is fixed and independent of other factors such as the size of ongoing reads and writes.
+
+For this reason, each node only needs to know its maximum bandwidth---measured beforehand using standard profiling and sizing operations---to determine whether it is able to handle the load requested by a table.
+For this purpose, SSD disks must be used, as they provide constant and predictable performance, unlike HDDs, which are subject to unpredictable slowdowns due to seek operations and access latency.
