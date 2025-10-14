@@ -1,41 +1,100 @@
+\usepackage{hyperref}
+
+
 \section{Introduction}
 \label{sec:introduction}
 
-% Premesse / Perché + parte di Related Work
-
-In recent years, replicated storage services in the field of \textit{Cloud Computing} have gained significant importance.
+In recent years, replicated storage services in the field of Cloud Computing have gained significant importance.
 In a context where applications must serve millions of users simultaneously, often geographically distributed,
 it becomes crucial to design systems capable of providing horizontal scalability, high availability, and fault tolerance.
 
 These properties must coexist with the need to keep response times low and ensure efficient resource management.
 Traditional data management systems based on relational models are often unsuitable for these new distributed scenarios.
-For this reason, modern architectures increasingly rely on \textit{NoSQL} solutions that, in exchange for simpler operations,
-offer lower overhead and better scalability compared to traditional \textit{SQL} databases.
+For this reason, modern architectures increasingly rely on NoSQL solutions that, in exchange for simpler operations,
+offer lower overhead and better scalability compared to traditional SQL databases.
 
-Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
+Another aspect of growing importance is data access latency, as observed on platforms such as DynamoDB~\cite{Dynamo2007},
 which guarantee response times below 10~ms~\cite{DynamoWhitepaper}.
-However, providing latency and performance guarantees in distributed and \textit{multi-tenant} environments proves extremely challenging.
+However, providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
 
-Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a \textit{best effort} approach,
+Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
 without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
-The \textit{multi-tenant} model, in which several customers share the same physical or virtual resources,
+% TODO: Qualcosa hanno, semplicemente throttling senza però garantire realmente le performance, posso sempre fare over-allocation.
+%       E sono tutti master-slave per gestire questa cosa.
+The multi-tenant model, in which several customers share the same physical or virtual resources,
 introduces additional challenges in workload management and in guaranteeing minimum performance levels.
-In the absence of explicit isolation mechanisms, a particularly active \textit{tenant} can compromise the quality of service offered to others,
+In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
 making precise throughput control for each client essential.
+% Questo pezzo qui sopra insomma.
 
-% Paper Contributions
+\paragraph{Paper Contributions}
 
-The \textit{Kitsurai} project is presented as a first attempt to create a \textit{key-value store} that is not only scalable and resilient,
+% TODO: Qui c'era da chiarire se si può dire il nome del progetto per il discorso anonimita.
+The \textit{Kitsurai} project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
-The project was developed in \textit{Rust}, a language chosen not only for its excellent performance but also for the memory safety model it provides.
-\textit{Rust} is known for delivering performance comparable to \textit{C++} while avoiding common classes of errors such as \textit{race conditions} or \textit{memory leaks},
+It achieves this with a bandwidth allocation and key distribution algorithm, with configurable replication, read concern and write concern per table.
+The resulting system is designed to work without the need for shared state, making % TODO
+
+The project was developed in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
+Rust is known for delivering performance comparable to C++ while avoiding common classes of errors such as race conditions or memory leaks,
 making it particularly suitable for programming complex distributed systems.
+In addition, it has an ever-growing set of high quality libraries that simplified development considerably.
 
-% TODO: Aggiungere parte sull'algoritmo di distribuzione
+\paragraph{Paper Organization}
+% TODO
 
 
-The following chapters analyze in detail the design choices, the system architecture,
-and the results obtained through empirical tests, with particular attention to throughput and latency guarantees for clients.
+\section{Related Work}
+\label{sec:related}
 
-% TODO: Related work
+Classical works on real-time databases~\cite{Kao & Garcia-Molina, 1994}
+provide the foundation for scheduling and resource management to meet timing constraints.
+While much of this research addresses hard real-time systems,
+it motivates our approach of admission control and pre-allocation of resources
+to guarantee timing constraints in distributed databases.
+
+Leaderless distributed key-value stores have been widely studied in the academic literature.
+Amazon's Dynamo~\cite{Dynamo2007} introduced a decentralized architecture with hash-based partitioning,
+gossip-based membership, and Merkle-tree anti-entropy for repair.
+As full consistency is expensive in the face of partitions and failures, Dynamo opts for eventual consistency.
+Conflicting updates are later detected via versioning and resolved at read time.
+Cassandra~\cite{Cassandra} extends this design with tunable consistency and wide-column support.
+In the context of consistent hashing, the concept of virtual nodes is also introduced by Cassandra, % TODO: Check the paper for this
+to aide load balancing and simplify add and remove operations.
+Much like Dynamo, reads in Cassandra are also expensive due to their append-only approach for write,
+but that allows them to have much higher write rates.
+Amazon's DynamoDB~\cite{Dynamo2022, DynamoWhitepaper} later introduced the concept of bandwidth per table as Read Capacity Units (RCUs) and Write Capacity Units (WCUs),
+which are used by their solution to limit client requests.
+An internal system also uses this metrics to track which partitions are no longer able to satisfy the user requested capacity,
+and split those partitions onto multiple physical nodes.
+
+Our work builds on these foundations by maintaining a peer-uniform, leaderless architecture with gossip and Merkle-tree anti-entropy,
+but introduces per-table bandwidth reservations and schema-time admission control,
+which can refuse table creation if cluster resources cannot satisfy the requested guarantees.
+We drop the dynamic splitting of partitions in favour of a simpler assumption of uniform key access. % TODO: Filo bruttino detto così.
+Moreover, our work drops consistency guarantees completely, leaving the resolution of the correct value up to the user,
+this in turn also makes reads trivial for the database itself.
+
+Recently X-Stor [Lei et al., 2024], a cloud-native multi-model NoSQL database, introduced a general request unit (RU)
+which encompasses all resources (CPU, RAM, disk IOs and network IOs) into a single metric.
+This metric is then used by the system to both limit tenant requests and by a scheduler to move or scale hot partitions.
+Unlike DynamoDB's approach which permanently splits partitions, X-Stor's approach is more focused on balancing live requests to maximise cluster utilization.
+
+%SWIM [Das et al., DSN 2002] formalizes scalable gossip-based membership protocols suitable for uniform peers,
+%of which we unknowingly at the time implemented a subset of the functionalities. % TODO: Da capire meglio cosa abbiamo fatto e cosa no.
+
+Another approach focuses on reducing tail latency of existing NoSQL databases.
+Andreoli et al.~\cite{RT-Mongo} and its follow-up work by Cucinotta et al.~\cite{IEEE TCC 2023}
+implement per-request prioritization for improved responsiveness in NoSQL DBaaS\@.
+Our approach tackles the issue at a different level, but similar techniques could also be applied to our own implementation.
+
+A parallel line of research, that fundamentally covers the same topics, is that of CPU schedulers for real-time processes.
+As developed by Abeni et al.?\ for the linux kernel with \texttt{SCHED\_DEADLINE}, the Earliest Deadline First (EDF) algorithm % TODO: Trova paper su SCHED_DEADLINE
+can be used to provide explicit latency guarantees for the scheduled tasks.
+Our implementation internally (by Rust's crate \texttt{tokio}, the de-facto standard\footnote{
+    \url{https://crates.io/crates/tokio} shows 416M of all-time downloads against the second most popular async-std/smol with 70M of all-time downloads.
+    And this if we want too, but is pretty random: \url{https://corrode.dev/blog/async/?utm_source=chatgpt.com}
+} for asynchronous IO operations)
+uses a multi-threaded work-stealing scheduler~\cite{Blumofe & Leiserson (1994–1999)?},
+which could benefit be augment by a more powerful scheduling algorithm.
