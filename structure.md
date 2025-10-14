@@ -17,9 +17,6 @@ Quello che si è fatto in breve:
 ## Perché / Premesse
 - Necessità di un database scalabile capace anche di garantire performance per applicazioni (soft) real-time.
 - Nuovo linguaggio: Rust = blazingly fast TM
-- ?
-- ?
-- ?
 
 ## Paper Contributions
 Cosa si è fatto nel paper:
