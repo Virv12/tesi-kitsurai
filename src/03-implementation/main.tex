@@ -1,8 +1,6 @@
 \section{Implementation}
 \label{sec:implementation}
 
-%# Implementazione
-%
 %### Algoritmo di distribuzione con formula diretta
 %assumendo tabella distribuita su più az
 %"Algoritmo"/Esempio get + set, concetto di router
@@ -22,117 +20,148 @@
 
 To read or write a key, the following steps are performed:
 \begin{enumerate}
-    \item The client connects to a node of its choice, which acts as a
-        \emph{router}.
+    \item The client connects to an arbitrary node of its choice, which acts as
+        a \emph{router}.
     \item The client sends the key and, in case of a write, the value to be
         stored.
     \item The router computes the \texttt{n} nodes responsible for that key
         (see Section~\ref{subsec:replication-ring}).
     \item The router sends the read or write request to the responsible nodes.
     \item The nodes respond with the requested value or confirm the write.
-    \item The router aggregates the responses and returns the first \texttt{r}
-        (or \texttt{w}) available results to the client.
+    \item The router aggregates the responses and returns as soon as it
+        receives \texttt{r} (for reads) or \texttt{w} (for writes) successful
+        replies.
 \end{enumerate}
 
 If fewer than \texttt{r} (or \texttt{w}) nodes respond successfully, the
-operation fails and the client receives an error.
+operation fails and an error is returned to the client.
 
 \input{03-implementation/ring.tex}
 
 \subsection{Tables}
-\label{subsec:tables}
+\label{subsec:impl-tables}
 
-Each table has four parameters specified by the user at creation time:
+We distinguish between a table's \emph{local state}, maintained independently
+by each node in the cluster and might differ among them, and its \emph{global
+state}, derived from the combination of the local states over all nodes.
+
+Locally, a table is in one of four phases: \emph{unknown}, \emph{prepared},
+\emph{created}, or \emph{deleted}:
 \begin{itemize}
-    \item \texttt{bandwidth} or \texttt{b}: the total number of requests (\texttt{get} and \texttt{set}) that the system must guarantee for the table, expressed in requests per second.
-    \item \texttt{n}: the replication factor for each key-value pair.
-    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes that must successfully respond to a read request.
-    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes that must successfully respond to a write request.
+    \item \emph{unknown}: the node is not aware of the table.
+    \item \emph{prepared}: some bandwidth is allocated, but the table has not
+        yet been created.
+    \item \emph{created}: the table is fully operational on that node.
+    \item \emph{deleted}: the table is no longer operational on that node.
 \end{itemize}
+The local state of a table can only progress in phase monotonically in the order:
+\[
+    \emph{unknown} \rightarrow \emph{prepared} \rightarrow \emph{created}
+    \rightarrow \emph{deleted}.
+\]
 
-And another four parameters computed automatically:
+Globally, a table is in one of three phases: \emph{unknown}, \emph{created} or
+\emph{deleted}. A table cannot be globally \emph{prepared}, as this state
+represents an intermediate phase during creation.
 \begin{itemize}
-    \item \texttt{id}: a UUIDv7 identifying the table, generated at creation.
-    \item $S$: the effective bandwidth of the table considering the replication effect, computed as $\displaystyle S = b \cdot n$.
-    \item \texttt{responsible\_nodes}: the list of nodes on which the table's key-value pairs are distributed, chosen to guarantee replication and data availability.
-    \item $s_i$: the bandwidth allocated by node $i$ for the table, such that $\displaystyle \sum s_i = S$.
+    \item \emph{deleted}: at least one node is locally \emph{deleted}.
+    \item \emph{created}: all responsible nodes for the table are locally
+        \emph{created} and the table is not globally \emph{deleted}.
+    \item \emph{unknown}: it is neither globally \emph{created} nor globally
+        \emph{deleted}.
 \end{itemize}
+The global state of a table can also only progress in phase monotonically in the order:
+\[
+    \emph{unknown} \rightarrow \emph{created} \rightarrow \emph{deleted}.
+\]
 
-Each table is managed by a set of nodes, called \emph{responsible nodes}, chosen to guarantee replication and data availability.
-On each node, a table can be in one of three states: \emph{prepared}, \emph{created}, or \emph{deleted}.
-Tables can only progress in state in the order: \emph{prepared} $\rightarrow$ \emph{created} $\rightarrow$ \emph{deleted}.
-A table is \emph{prepared} when the requested bandwidth has been allocated, but it has not yet been created.
-A table is considered \emph{created} when all responsible nodes consider it so; it is considered \emph{deleted} when at least one node marks it as such.
-The state of a table is synchronized among nodes through the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}).
+\subsubsection{Gossip}
+\label{subsubsec:gossip}
 
-\subsubsection{Creation and Deletion}
-\label{subsubsec:creation-deletion}
+The local state of a table is synchronized among nodes though the use of a
+Gossip protocol, this allows the local state of a table to converge towards the
+global state.
+
+Each node in the cluster initiates a \emph{gossip} exchange with a randomly
+chosen peer every second. If the peer is unavailable, the exchange fails and
+the node will try again in the next second with a different peer.
+
+During the exchange, the two nodes synchronize the metadata of table that are
+in the locally \emph{created} or locally \emph{deleted} for at least one of the
+two nodes. Tables that are locally \emph{prepared} are considered the same as
+\emph{unknown}.
+
+Conflicts are resolved by a phase order in which \emph{deleted} $\succ$
+\emph{created} $\succ$ \emph{prepared} $\succ$ \emph{unknown}; the more
+advanced phase prevails. If both nodes report the same phase for a table, their
+metadata must be identical; otherwise the system is inconsistent.
+
+Merkle trees~\cite{MerkleTree} are used to efficiently detect divergences
+allowing nodes to synchronize only the differing tables.
+
+\subsubsection{Creation}
+\label{subsubsec:creation}
 
 To create a table, the following steps are performed:
 \begin{enumerate}
-    \item The client connects to a node of its choice (called the \emph{router}) and sends the table's parameters \texttt{b}, \texttt{n}, \texttt{r}, and \texttt{w}.
-    \item The router generates an \texttt{id} for the table and computes the effective bandwidth $S = b \cdot n$ to account for replication.
-    \item The router requests the available bandwidth for the new table from the other nodes, allocating up to $b$ on a single node, thus ensuring that the table is replicated exactly $n$ times.
-    If a node is unavailable it is skipped, while a responding node marks the table as \emph{prepared}.
-    \item Once sufficient bandwidth is obtained (at least $S$), the router defines the list of responsible nodes and their respective quotas $s_i$.
-    \item The router asks the nodes that responded in step~3 to execute the \texttt{commit} of the table; on these nodes the table enters the \emph{created} state.
-    \item If all \texttt{commit} requests succeed, the creation succeeds and the router returns the \texttt{id} of the new table to the client; otherwise, creation fails and the router returns an error.
+    \item The client connects to a node of its choice, which acts as a
+        \emph{router}.
+    \item The client sends the table's parameters \texttt{b}, \texttt{n},
+        \texttt{r}, and \texttt{w} to the router.
+    \item The router generates an \texttt{id} for the table and computes the
+        effective bandwidth $S = b \cdot n$ to account for replication.
+    \item\label{step:prepare} The router iterates over the nodes in the
+        cluster, skipping unavailable ones, requesting a bandwidth allocation
+        for the new table, allocating up to $b$ on each availability zone. Each
+        node can allocate as much bandwidth as it has available, up to the
+        requested amount, after performing the allocation, the node marks the
+        table as locally \emph{prepared}.
+    \item Once sufficient bandwidth is obtained (at least $S$), the router
+        defines the list of responsible nodes and their respective bandwidths
+        $s_i$.
+    \item\label{step:commit} The router asks the nodes that responded in
+        step~\ref{step:prepare} to commit the table; on these nodes the table
+        enters the \emph{created} state.
+    \item The router returns the \texttt{id} of the new table to the client.
 \end{enumerate}
 
-If a node receives a preparation request for a new table but does not receive a \texttt{commit} within a certain timeout, it will mark the table as \emph{deleted}.
-This ensures that, in case of errors during creation, the table does not remain in an undefined state that would entail a loss of allocated bandwidth.
+If all steps succeed the table is created successfully, in particular if the
+step~\ref{step:commit} succeeds, all the responsible nodes will have marked the
+table as locally \emph{created}, and thus the table will be considered globally
+\emph{created}.
 
-To delete a table, it is sufficient for a node to mark it as \emph{deleted}; subsequently, thanks to the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}), the other nodes will synchronize and the table will be considered deleted by all.
+If any node fails to respond in step~\ref{step:commit}, the router will
+consider the table creation failed, and will return an error to the client. It
+will also inform the nodes that responded in step~\ref{step:prepare} to delete
+the table, allowing the bandwidth to be freed.
 
-\subsubsection{Metadata}
-\label{subsubsec:metadata}
+If the router fails between step~\ref{step:prepare} and step~\ref{step:commit},
+some nodes will have marked the table as locally \emph{prepared}, wasting the
+reserved bandwidth. To avoid this, each node that participates in the creation
+of a table maintains a timeout of 1 minute. If the node does not receive a
+commit request within this time, it will mark the table as locally
+\emph{deleted}, freeing the allocated bandwidth.
 
-The database contains a special table, not accessible to users, identified by a UUIDv8 generated from the 16 bytes \texttt{kitsuraimetadata}.
-This table contains the metadata of all tables created in the cluster, including their parameters and responsible nodes.
-Thanks to this, every node can act as a router for \texttt{get} and \texttt{set} requests.
-The metadata table, identified by a UUIDv8, cannot conflict with the UUIDv7 generated for user tables, since the version is encoded within a UUID\@.
+\subsubsection{Deletion}
+\label{subsubsec:deletion}
 
-\subsection{Gossip}
-\label{subsec:gossip}
+To delete a table, it is sufficient for a node to mark it as locally
+\emph{deleted}. The table will then be considered globally \emph{deleted} and,
+thanks to the Gossip protocol, the other nodes will synchronize and the table
+will be considered deleted by all nodes.
 
-Each node in the cluster initiates a \emph{gossip} exchange with a randomly chosen peer every second.
-During the exchange, the two nodes synchronize the metadata of \emph{created} and \emph{deleted} tables, but not those \emph{in preparation}.
-If the same table is in different states on two nodes, the state representing greater progress prevails.
-Using a Merkle tree~\cite{MerkleTree} allows nodes to quickly identify divergent tables and synchronize only those.
-If the peer is unavailable, the exchange fails.
-Gossip enables the system to reach metadata consistency among nodes even in the presence of offline nodes or network errors.
+Even if it's not strictly necessary, the node receiving the deletion request
+acts as a router, informing all responsible nodes of the deletion, to allow
+them to free the allocated bandwidth and storage space more quickly, and
+prevent further read or write requests to the deleted table.
 
-%\subsection{Availability Zones}
-%\label{subsec:availability-zones}
-%
-%To ensure database availability, each node can be tagged with a string identifying its \emph{Availability Zone} (\texttt{AZ}).
-%Two nodes belonging to the same \texttt{AZ} cannot be chosen to replicate the same key.
-%To ensure that keys are replicated in a way that keeps them available even in case of an entire \texttt{AZ} failure, we modify the key distribution algorithm:
-%\begin{itemize}
-%    \item during table creation, the router must not allocate more than \texttt{b} bandwidth from nodes in the same \texttt{AZ};
-%    \item nodes must be assigned to the ring in order of \texttt{AZ}, so that an interval of length \texttt{n} in the ring contains nodes belonging to distinct \texttt{AZ}s.
-%\end{itemize}
-%
-%\subsection{Throughput throttling}
-%\label{subsec:throughput-throttling}
-%
-%In a multi-tenant system such as Kitsurai, it is necessary to prevent a single client from monopolizing resources and compromising the performance of others.
-%For this reason, Kitsurai implements a throughput throttling mechanism that guarantees each client the bandwidth requested at table creation, even in the presence of high and concurrent loads.
-%
-%Each node in the cluster maintains, for each table, a variable \texttt{sched\_at} that indicates when the node will be available again to execute new operations on that table.
-%When a client sends a read or write request, the node waits until \texttt{sched\_at} before executing the operation, then increments \texttt{sched\_at} by an interval equal to $\displaystyle \frac{1}{b}$, where $b$ represents the requested bandwidth for the table.
-%If \texttt{sched\_at} is already in the past, the system could execute uncontrolled operations until \texttt{sched\_at} catches up with the current time; to avoid this, if \texttt{sched\_at} is already in the past, it is updated to 100 ms before the current time, thus allowing a short controlled burst of operations.
-%
-%\begin{samepage}
-%    \noindent In pseudocode, throughput throttling can be represented as follows:
-%    \begin{minted}{python}
-%def limit_throughput(table, operation):
-%    current_time = get_current_time()
-%    if table.sched_at > current_time - 0.1:
-%        table.sched_at = current_time - 0.1
-%    run_at = table.sched_at
-%    table.sched_at += 1 / table.bandwidth
-%    wait_until(run_at)
-%    execute_operation(operation)
-%    \end{minted}
-%\end{samepage}
+%\subsubsection{Metadata}
+%\label{subsubsec:metadata}
+
+%The database contains a special table, not accessible to users, identified by
+%a UUIDv8 generated from the 16 bytes \texttt{kitsuraimetadata}. This table
+%contains the metadata of all tables created in the cluster, including their
+%parameters and responsible nodes. Thanks to this, every node can act as a
+%router for \texttt{get} and \texttt{set} requests. The metadata table,
+%identified by a UUIDv8, cannot conflict with the UUIDv7 generated for user
+%tables, since the version is encoded within a UUID\@.

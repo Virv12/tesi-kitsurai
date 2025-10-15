@@ -4,58 +4,89 @@
 To ensure database availability, each key needs to be replicated across
 multiple nodes while satisfying the following requirements:
 
-\begin{itemize}
+\begin{enumerate}
     \item Each key is replicated on \texttt{n} nodes, each from a distinct
         availability zone.
     \item $w_i \leq s_i$ for each node $i$, where $w_i$ is the workload on node
         $i$ and $s_i$ is the bandwidth allocated by that node for the table,
         both measured in requests per second.
-\end{itemize}
+\end{enumerate}
 
-The workload on the $i$-th node is $w_i = \sum_{j \in K_i} p_j \cdot b$ where
-$K_i$ is the set of keys assigned to node $i$, $p_j$ is the probability that
-key $j$ is requested and $b$ is the total number of requests per second for the
-table.
+The workload on the $i$-th node is $\displaystyle w_i = \sum_{k \in K_i} p_k
+\cdot b$ where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
+probability that key $k$ is requested and $b$ is the total bandwidth of the
+table, in requests per second.
 
 An adverse distribution of keys in requests would make it impossible to scale
 the table on multiple nodes, for example if node $i$ is assigned a key $k$ such
 that $p_k = 1$ we get that $w_i = b \leq s_i$, requiring that node $i$ is able
 to handle the entire table workload. To avoid this problem, we assume that keys
-are uniformly distributed, i.e., $\displaystyle p_j = \frac{1}{|K|}$ for each
-key $j$ in the table, where $K$ is set of keys in the table.
+are uniformly distributed, i.e., $\displaystyle p_k = \frac{1}{|K|}$ for each
+key $k$ in the table, where $K$ is set of keys in the table.
 
 Under this assumption, the workload on node $i$ is $\displaystyle w_i =
 \frac{|K_i|}{|K|} \cdot b$ so we can rewrite the second requirement as
 $\displaystyle \frac{|K_i|}{|K|} \leq \frac{s_i}{b}$.
 
-As an additional constraint, we don't want to waste resources, so we require
-that $\displaystyle S = \sum s_i$, the total bandwidth allocated for the table
-across all nodes, is minimal. We can get a lower bound for $S$ by adding the
-second requirement over all nodes, we get $\displaystyle \frac{1}{|K|} \sum
-|K_i| \leq \frac{S}{b}$. Since each key is assigned to exactly \texttt{n}
-nodes, we have $\displaystyle \sum |K_i| = n \cdot |K|$, so $\displaystyle n
-\leq \frac{S}{b}$ and therefore $\displaystyle S \geq b \cdot n$. We will show
-that this bound is achievable, so from now on we will assume $S = b \cdot n$.
+Since we don't want to waste resources, we are going to strengthen the
+requirement and enforce that $\displaystyle \frac{|K_i|}{|K|} = \frac{s_i}{b}$.
+Summing over all nodes from the same availability zone $z$, we get
+$\displaystyle \sum_{i \in AZ_z} \frac{|K_i|}{|K|} = \sum_{i \in AZ_z}
+\frac{s_i}{b}$, since each key is assigned to at most one node from the same
+availability zone, we have $\displaystyle \sum_{i \in AZ_z} |K_i| \leq |K|$,
+hence $\displaystyle \sum_{i \in AZ_z} s_i \leq b$, and $s_i \leq b$ for each
+node $i$.
 
-To define the ring we assume each value $s_i$ to be an integer. The
-\emph{replication ring} is a circular array of size $S$. For each position in
-the ring we assign a node $i$ such that:
+%\begin{equation}
+%\label{eq:total-bandwidth}
+%S = b \cdot n
+%\end{equation}
 
-\begin{itemize}
-    \item Every interval of length $n$ in the ring contains distinct nodes with
-        different availability zones.
+%\begin{lemma}[AZ feasibility]
+%    \label{lem:az-feasibility}
+%    Under the two requirements above, for each availability zone $z$ the
+%    following condition must hold:
+%    \[
+%        \sum_{i : \mathrm{az}(i) = z} s_i \leq b
+%    \]
+%\end{lemma}
+%\begin{proof}
+%    Summing the second requirement over all nodes from the same availability
+%    zone $z$, we get $\displaystyle \sum_{i : \mathrm{az}(i) = z}
+%    \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z} \frac{s_i}{b}$. Since
+%    each key is assigned to at most one node from the same availability zone,
+%    we have $\displaystyle \sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
+%    $\displaystyle \sum_{i : \mathrm{az}(i) = z} s_i \leq b$.
+%\end{proof}
+
+Let's define $\displaystyle S = \sum s_i$, the total bandwidth allocated for
+the table across all nodes. By summing the second requirement over all nodes,
+we obtain $\displaystyle \frac{1}{|K|} \sum |K_i| = \frac{S}{b}$. Since each
+key is assigned to exactly \texttt{n} nodes, we have $\displaystyle \sum |K_i|
+= n \cdot |K|$, and so $\displaystyle S = b \cdot n$.
+
+To define the ring we assume that all values $s_i$, $b$ and $S$ are integers
+with a granularity of $1$ request per second. We define the \emph{replication
+factor} as a circular array of size $S$. For each position in the ring we
+assign a node $i$ such that:
+
+\begin{enumerate}
+    \item Every consecutive interval of length $n$ in the ring contains
+        distinct nodes with different availability zones.
     \item Each node $i$ occupies exactly $s_i$ positions in the ring.
-\end{itemize}
+\end{enumerate}
 
-Given a key, we find its position in the ring using its hash value (using
-\texttt{XXH3}\footnote{\url{https://xxhash.com}}, a fast non-cryptographic hash
-algorithm) and taking the result modulo $S$. The key is then assigned to the
-\texttt{n} nodes immediately following the computed position.
+Given a key $k$, we find its starting position $p$ in the ring using its hash
+value (using \texttt{XXH3}\footnote{\url{https://xxhash.com}}, a fast
+non-cryptographic hash algorithm) and taking the result modulo $S$. The key is
+then assigned to the \texttt{n} nodes immediately following the computed
+position, i.e., to the nodes at positions $p, p + 1, \dots, p + n - 1$
+(wrapping around the ring if necessary).
 
 Since each interval of length $n$ contains distinct nodes, each key is assigned
 to \texttt{n} nodes with different availability zones, satisfying the first
 requirement. Furthermore, the probability that a key is assigned to position
-$i$ in the ring is $\displaystyle \frac{n}{S} = \frac{1}{b}$, so the expected
+$p$ in the ring is $\displaystyle \frac{n}{S} = \frac{1}{b}$, so the expected
 number of keys assigned to the position is $\displaystyle |K| \cdot
 \frac{1}{b}$. Since each node $i$ occupies exactly $s_i$ positions in the ring
 and each key is assigned at most once to the same node, the expected number of
@@ -65,55 +96,41 @@ thus satisfying the second requirement.
 \subsubsection{Explicit construction}
 \label{subsubsec:explicit-construction}
 
-Nodes are assigned to the ring iteratively, starting from the first node. Each
-node is assigned to $s_i$ positions, proceeding from the last position assigned
-to the previous node (or from an arbitrary position for the first node) and
-occupying one position every $n$. If that position is already taken by another
-node, we skip to the next; it is guaranteed that it will never be necessary to
-skip two consecutive positions. Since each node has bandwidth $s_i \leq b$, and
-the ring has size $S = b \cdot n$, it is guaranteed that every node can be
-assigned to $s_i$ positions without completing a full cycle of the ring, so all
-positions are at least $n$ slots apart. Therefore, this construction satisfies
-the properties described above for the \emph{replication ring}.
+Nodes are assigned to the ring iteratively starting from the first node, nodes
+from the same availability zone are grouped together. Each node is assigned to
+$s_i$ positions, proceeding from the last position assigned to the previous
+node (or from an arbitrary position for the first node) and occupying one
+position every $n$. If that position is already taken by another node, we skip
+to the next; it is guaranteed that it will never be necessary to skip two
+consecutive positions.
 
-\begin{samepage}
-    \noindent In pseudocode, the construction of the ring can be represented as
-    follows:
-    \begin{minted}{python}
+Since each availability zone $z$ has bandwidth $\displaystyle \sum_{i \in AZ_z}
+s_i \leq b$, and the ring has size $S = b \cdot n$, it is guaranteed that the
+nodes from the same availability zone $z$ are assigned to $\displaystyle
+\sum_{i \in AZ_z} s_i$ positions without completing a full cycle of the ring,
+so all positions occupied by nodes of the same availablility zone are at least
+$n$ positions apart. Therefore, this construction satisfies the properties
+described above for the \emph{replication ring}.
+
+\noindent In pseudocode, the construction of the ring can be represented as
+follows:
+\begin{lstlisting}[language=Python]
 def build_ring(table):
-    S = table.bandwidth * table.n
-    ring = [None] * S
-    current_position = 0
+  S = table.bandwidth * table.n
+  ring = [None] * S
+  curr_pos = 0
 
-    for i in range(table.m):
-        for _ in range(table.s[i]):
-            if ring[current_position] is not None:
-                current_position = (current_position + 1) % S
-            ring[current_position] = i
-            current_position = (current_position + table.n) % S
+  # Assume nodes are already sorted by availability zone
+  for i in range(table.m):
+    for _ in range(table.s[i]):
+      if ring[curr_pos] is not None:
+        curr_pos = (curr_pos + 1) % S
+      assert ring[curr_pos] is None
+      ring[curr_pos] = i
+      curr_pos = (curr_pos + table.n) % S
 
-    return ring
-    \end{minted}
-    \begin{minted}{js}
-function build_ring(table) {
-    let S = table.bandwidth * table.n;
-    let ring = new Array(S).fill(null);
-    let current_position = 0;
-
-    for (let i = 0; i < table.m; i++) {
-        for (let j = 0; j < table.s[i]; j++) {
-            if (ring[current_position] != null) {
-                current_position = (current_position + 1) % S;
-            }
-            ring[current_position] = i;
-            current_position = (current_position + table.n) % S;
-        }
-    }
-
-    return ring;
-}
-    \end{minted}
-\end{samepage}
+  return ring
+\end{lstlisting}
 
 This construction requires $O(S)$ time and space.
 
@@ -124,157 +141,129 @@ Let's see an example of ring construction for a table with parameters:
     b = 4,\quad
     S = b \cdot n = 12,
 \]
-and five nodes with bandwidth allocated for the table:
+and five nodes all from distinct availability zones with bandwidth allocated
+for the table:
 \[
     s_0 = 4,\; s_1 = 3,\; s_2 = 2,\; s_3 = 1,\; s_4 = 2.
 \]
 
-We start with a circular array \(r_0, r_1, \dots, r_{11}\) of length 12. Each
-node \(i\) is assigned to \(s_i\) positions, jumping \(n=3\) slots from the
-last occupied position. The placements are:
-\[
-    \begin{array}{rl}
-        \text{Node }0\;(s_0=4): & r_{0\phantom{0}} = 0 \\
-                                & r_{3\phantom{0}} = 0 \\
-                                & r_{6\phantom{0}} = 0 \\
-                                & r_{9\phantom{0}} = 0 \\[0.5ex]
-        \text{Node }1\;(s_1=3): & r_{1\phantom{0}} = 1 \\
-                                & r_{4\phantom{0}} = 1 \\
-                                & r_{7\phantom{0}} = 1 \\[0.5ex]
-        \text{Node }2\;(s_2=2): & r_{10} = 2 \\
-                                & r_{2\phantom{0}} = 2 \\[0.5ex]
-        \text{Node }3\;(s_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
-        \text{Node }4\;(s_4=2): & r_{8\phantom{0}} = 4 \\
-                                & r_{11} = 4
-    \end{array}
-\]
-Consequently, we obtain:
+We start with a circular array $r_0, r_1, \dots, r_{11}$ of length $S = 12$.
+Each node $i$ is assigned to $s_i$ positions, jumping $n = 3$ slots from the
+last assigned position.
+
+\begin{itemize}
+    \item Node $0$ is assigned to $s_0 = 4$ positions: $r_0$, $r_{0+3} = r_3$,
+        $r_{3+3} = r_6$, and $r_{6+3} = r_9$.
+    \item Node $1$ is assigned to $s_1 = 3$ positions: $r_{9+3} = r_{0}$ is
+        already taken, so we skip to $r_1$, then $r_{1+3} = r_4$, and
+        $r_{4+3} = r_7$.
+    \item Node $2$ is assigned to $s_2 = 2$ positions: $r_{7+3} = r_{10}$ and
+        $r_{10+3} = r_1$ is already taken, so we skip to $r_2$.
+    \item Node $3$ is assigned to $s_3 = 1$ position: $r_{2+3} = r_5$.
+    \item Node $4$ is assigned to $s_4 = 2$ positions: $r_{5+3} = r_8$ and
+        $r_{8+3} = r_{11}$.
+\end{itemize}
+
+%\[
+%    \begin{array}{rl}
+%        \text{Node }0\;(s_0=4): & r_{0\phantom{0}} = 0 \\
+%                                & r_{3\phantom{0}} = 0 \\
+%                                & r_{6\phantom{0}} = 0 \\
+%                                & r_{9\phantom{0}} = 0 \\[0.5ex]
+%        \text{Node }1\;(s_1=3): & r_{1\phantom{0}} = 1 \\
+%                                & r_{4\phantom{0}} = 1 \\
+%                                & r_{7\phantom{0}} = 1 \\[0.5ex]
+%        \text{Node }2\;(s_2=2): & r_{10} = 2 \\
+%                                & r_{2\phantom{0}} = 2 \\[0.5ex]
+%        \text{Node }3\;(s_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
+%        \text{Node }4\;(s_4=2): & r_{8\phantom{0}} = 4 \\
+%                                & r_{11} = 4
+%    \end{array}
+%\]
+
+Finally, we obtain:
 \[
     \begin{array}{c|cccccccccccc}
-        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
-        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2  & 4
+        p   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
+        r_p & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2  & 4
     \end{array}
 \]
-It is easy to verify that every window of length \(n=3\) contains distinct
-nodes and that each node \(i\) occupies exactly \(s_i\) positions.
+
+It is easy to verify that every window of length $n = 3$ contains distinct
+nodes and that each node $i$ occupies exactly $s_i$ positions.
 
 \subsubsection{Implicit construction}
 \label{subsubsec:implicit-construction}
 
-Since the allocated bandwidth can be considerably high, explicitly constructing
-a ring that meets the criteria may be expensive. To avoid this, we look for an
-algorithm that directly computes the node assigned to a position $i$ in the
-ring. Let $o_i$ be the iteration at which the $i$-th position is assigned. We
-observe that the explicit construction assigns nodes in the following order:
-first the multiples of $n$ in increasing order, then the numbers congruent to
-$1$ modulo $n$ in increasing order, then the numbers congruent to $2$ modulo
-$n$, and so on up to $n-1$. It follows that $\displaystyle o_i = \left\lfloor
-\frac{i}{n} \right\rfloor + (i \bmod n) \cdot b$. Now we need to find the
-$o_i$-th assigned node, i.e., the first node $x$ such that $\displaystyle
-\sum_{j=0}^{x} s_j > o_i$.
+Since the allocated bandwidth can be considerably high, constructing the ring
+explicitly may be really expensive. To avoid this, we look for an algorithm
+that directly computes the node assigned to a position $p$ in the ring. Let
+$o_p$ be the iteration at which the $p$-th position is assigned. We observe
+that the explicit construction assigns nodes in the following order: first the
+multiples of $n$ in increasing order, then the numbers congruent to $1$ modulo
+$n$ in increasing order, then the numbers congruent to $2$ modulo $n$, and so
+on up to $n-1$. It follows that $\displaystyle o_p = \left\lfloor \frac{p}{n}
+\right\rfloor + (p \bmod n) \cdot b$. Now we need to find the $o_p$-th assigned
+node, i.e., the node $i$ such that $\displaystyle \sum_{j=0}^{i-1} s_j \leq o_p
+< \sum_{j=0}^{i} s_j$.
 
-In pseudocode, the algorithm to find the node assigned to a position $i$ in the
+In pseudocode, the algorithm to find the node assigned to a position $j$ in the
 ring can be represented as follows:
-\begin{minted}{python}
-def get_node_at_position(table, i):
+\begin{lstlisting}[language=Python]
+def get_node_at_position(table, j):
     n = table.n
     b = table.bandwidth
-    o_i = floor(i / n) + (i % n) * b
-
-    sum = 0
-    for node in table.responsible_nodes:
-        sum += node.bandwidth
-        if sum > o_i:
-            return node
-
-def get_node_at_position(table, i):
-    n = table.n
-    b = table.bandwidth
-    o_i = floor(i / n) + (i % n) * b
+    o_p = floor(p / n) + (p % n) * b
 
     sum = 0
     for node in range(table.m):
         sum += table.s[node]
-        if sum > o_i:
+        if sum > o_p:
             return node
-\end{minted}
-\begin{minted}{js}
-function get_node_at_position(table, i) {
-    let n = table.n;
-    let b = table.bandwidth;
-    let o_i = Math.floor(i / n) + (i % n) * b;
+\end{lstlisting}
 
-    let sum = 0;
-    for (let node = 0; node < table.m; node++) {
-        sum += table.s[node];
-        if (sum > o_i) {
-            return node;
-        }
-    }
-}
-\end{minted}
-
-We can therefore compute the node assigned to a position $i$ in the ring in
-time linear in the number of responsible nodes and constant memory, without
-explicitly building the ring.
+We can therefore compute the node assigned to a position $p$ in the ring in
+time $O(m)$ and constant memory, without explicitly building the ring.
 
 The algorithm can be further optimized using a binary search on the prefix sums
-of $b_i$, assuming they are already computed and stored. In this case the
-algorithm runs in logarithmic time with respect to the number of responsible
-nodes, requiring linear memory for the prefix sums.
+of $s_i$, assuming they are already computed and stored. In this case the
+algorithm runs $O(\log m)$ time and $O(m)$ memory.
 
 \paragraph{Example}
-Continuing the previous example, we compute the prefix sums:
-\[
-    c_k = \sum_{j=0}^{k-1} s_j,
-\]
-i.e.,
+Let's apply the implicit construction to the example in the previous section.
+We start by computing the prefix sums $\displaystyle c_i = \sum_{j=0}^{i-1}
+s_i$, obtaining
 \[
     \begin{array}{c|cccccc}
-        k   & 0 & 1 & 2 & 3 &  4 &  5 \\ \hline
-        s_k & 4 & 3 & 2 & 1 &  2 &    \\ \hline
-        c_k & 0 & 4 & 7 & 9 & 10 & 12
+        i   & 0 & 1 & 2 & 3 &  4 &  5 \\ \hline
+        s_i & 4 & 3 & 2 & 1 &  2 &    \\ \hline
+        c_i & 0 & 4 & 7 & 9 & 10 & 12
     \end{array}
 \]
+
 We then compute
 \[
-    o_i = \Bigl\lfloor \frac{i}{n} \Bigr\rfloor + (i \bmod n) \cdot b.
+    o_p = \Bigl\lfloor \frac{p}{n} \Bigr\rfloor + (p \bmod n) \cdot b.
 \]
-For example, for \(i = 5\):
+For example, for $p = 5$ we have
 \[
     o_5 = \Bigl\lfloor \tfrac{5}{3} \Bigr\rfloor + (5 \bmod 3) \cdot 4 =
     1 + 2\cdot4 = 9.
 \]
-We then look for \(k\) such that
-\[
-    c_k \le o_5 < c_{k+1},
-\]
-finding \(c_3 = 9 \le 9 < 10 = c_4\), hence the responsible node at \(i=5\) is
-node~3. Repeating for all \(i=0,\dots,11\) we obtain:
+
+We then look for $i$ such that $c_i \leq o_5 < c_{i+1}$, finding $c_3 = 9 \leq
+9 < 10 = c_4$, hence the node at $p = 5$ is node~$3$.
+
+In this way we can compute $r_p$ for any $p$ without paying the cost of
+building the entire ring.
+
+Repeating the algorithm for all $p = 0, \dots, 11$ we obtain:
 \[
     \begin{array}{c|cccccccccccc}
-        i   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
-        o_i & 0 & 4 & 8 & 1 & 5 & 9 & 2 & 6 & 10 & 3 & 7 & 11 \\ \hline
-        r_i & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 & 4 & 0 & 2 & 4
+        p   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 &  8 & 9 & 10 & 11 \\ \hline
+        o_p & 0 & 4 & 8 & 1 & 5 & 9 & 2 & 6 & 10 & 3 &  7 & 11 \\ \hline
+        r_p & 0 & 1 & 2 & 0 & 1 & 3 & 0 & 1 &  4 & 0 &  2 &  4
     \end{array}
 \]
-In this way we reconstruct the ring without explicitly allocating an array of size \(S\).
 
-\subsubsection{Existence conditions}
-\label{subsubsec:existence-conditions}
-
-As shown, if each node satisfies the condition $s_i \leq b$ (as guaranteed
-during table creation), then the replication ring exists and can be
-constructed.
-
-Since the ring size is $S = b \cdot n > b$, we might try to build the ring even
-if a node has bandwidth $b < s_k \leq S$. However, under these conditions the
-ring cannot exist: it is not possible to assign keys so that they
-simultaneously satisfy the replication and bandwidth constraints.
-
-By contradiction, suppose a node $k$ has bandwidth $s_k > b$. Then that node
-would contain $\displaystyle n \cdot \frac{s_k}{S} = \frac{s_k}{b} > 1$ of the
-total keys, which is absurd.
-
-This shows that the conditions imposed during table creation are
-\emph{necessary and sufficient} for the correct operation of the system.
+This matches the result of the explicit construction.

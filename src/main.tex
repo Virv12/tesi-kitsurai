@@ -94,7 +94,7 @@
 \usepackage{multirow}
 \usepackage{multicol}
 %\usepackage{calc}           % Generic computation (used in tables)
-%\usepackage{xcolor}         % Colors
+\usepackage{xcolor}         % Colors
 %\usepackage{graphicx}       % Images
 %\usepackage{rotating}
 %\usepackage{float}
@@ -115,7 +115,7 @@
 %    pdfpagemode=FullScreen,
 %]{hyperref}
 %\usepackage{xurl}
-%%\usepackage{listings}       %% Code?
+\usepackage{listings}       % Code
 %\usepackage{minted}          % Code Syntax Highlithing
 %\usepackage[                % Misc?
 %    bottom
@@ -127,6 +127,23 @@
 %
 %\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 
+
+\lstdefinestyle{ACMstyle}{
+  basicstyle=\ttfamily\small,
+  %keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  %stringstyle=\color{orange},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=5pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  tabsize=2,
+  %frame=single,
+  captionpos=b
+}
+\lstset{style=ACMstyle}
 
 %%
 %% end of the preamble, start of the body of the document source.
