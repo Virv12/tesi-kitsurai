@@ -30,7 +30,7 @@ In our setup, for simplicity, machines $M$ and $A$ were assigned the same value,
 
 \paragraph{Distribution}
 To test the key distribution and scalability of the system, we used a table configured
-with enough bandwidth to saturate the test case, $N=3$, $R=1$, and $W=1$.
+with enough bandwidth to saturate the test case, $N=1$, $R=1$, and $W=1$.
 This configuration distributes requests across peers according to the machines' bandwidth proportions.
 
 
@@ -114,8 +114,8 @@ but it is due to the probabilistic nature of key distribution.
         Machine $M$ self stress   & --                    & 64.0                     & 5.0                      \\
         Machine $H$ self stress   & --                    & 83.3                     & 10.8                     \\
         Machine $A$ self stress   & --                    & 56.6                     & 4.8                      \\
-        Uniform on (3, 1, 1)      & 102.0                 & 44.1                     & 13.2                     \\
-        Proportional on (3, 1, 1) & 97.0                  & 56.5                     & 17.0                     \\
+        Uniform on (1, 1, 1)      & 102.0                 & 44.1                     & 13.2                     \\
+        Proportional on (1, 1, 1) & 97.0                  & 56.5                     & 17.0                     \\
         Uniform on (2, 2, 2)      & 67.3                  & 21.8                     & 7.2                      \\
         Proportional on (2, 2, 2) & 62.4                  & 28.0                     & 9.4                      \\
         \bottomrule
