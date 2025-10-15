@@ -1,8 +1,8 @@
-Classical works on real-time databases~\cite{Kao & Garcia-Molina, 1994}
+Classical works on real-time databases~\cite{RTDBS}
 provide the foundation for scheduling and resource management under timing constraints.
 While much of this research targets hard real-time systems,
 it motivates our approach of admission control and resource pre-allocation
-to guarantee timing constraints in distributed databases.
+to guarantee timing constraints in distributed databases. % TODO: Verify this + cita qualcosa di più interessante?
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
 Amazon’s Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning,
@@ -10,8 +10,6 @@ gossip-based membership, and Merkle-tree anti-entropy for repair.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
 Conflicting updates are detected through versioning and resolved at read time.
 Cassandra~\cite{Cassandra} extends this design with tunable consistency levels and wide-column data modeling.
-In the context of consistent hashing, Cassandra also introduces the concept of virtual nodes
-to aid load balancing and simplify node addition and removal. % TODO: Verify in the paper.
 As in Dynamo, Cassandra’s append-only write design results in more expensive reads,
 but enables significantly higher write throughput.
 Amazon’s DynamoDB~\cite{Dynamo2022, DynamoWhitepaper} later introduced the notion of per-table bandwidth quotas,
@@ -20,40 +18,39 @@ These capacities are also used by an internal monitoring system that tracks part
 and splits them dynamically across multiple physical nodes.
 
 Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip and Merkle-tree anti-entropy.
-It carries over DynamoDB's per-table bandwidth reservations, but introduces a schema-time admission control,
+It carries over DynamoDB's per-table bandwidth reservations, but introduces a creation-time admission control,
 allowing the system to refuse table creation when cluster resources cannot satisfy the requested guarantees.
 We deliberately omit dynamic partition splitting in favor of a simpler assumption of uniform key access. % TODO: Filo bruttino detto così.
 Moreover, our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user,
 which in turn simplifies read operations for the database.
 
-Recently, X-Stor~\cite{Lei2024}, a cloud-native multi-model NoSQL database, introduced a generalized Request Unit (RU) abstraction
+Recently, X-Stor~\cite{XStor}, a cloud-native multi-model NoSQL database, introduced a generalized Request Unit (RU) abstraction
 that encompasses all resource types—CPU, memory, disk I/O, and network I/O—into a single unified metric.
 This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
 Unlike DynamoDB’s approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
-% Our implementation lacks any such system... TODO?
 
-%SWIM [Das et al., DSN 2002] formalizes scalable gossip-based membership protocols suitable for uniform peers,
-%of which we unknowingly at the time implemented a subset of the functionalities. % TODO: Da capire meglio cosa abbiamo fatto e cosa no.
+SWIM~\cite{SWIM} formalizes scalable gossip-based membership protocols suitable for scalable peers,
+% TODO
+We also used a randomized approach for gossip, % TODO: See chapter?
+but, due to our static assumption on the peer set, there was no need to introduce more sophisticated mechanism.
 
 % TODO: CosmosDB potrebbe essere un'altro di cui parlare
 % TODO: Aerospike potrebbe essere un'altro di cui parlare
 % TODO: Couchbase potrebbe essere un'altro di cui parlare
 
 Another relevant research direction focuses on reducing tail latency in existing NoSQL databases.
-Andreoli et al.~\cite{RT-Mongo}, and the subsequent work by Cucinotta et al.~\cite{IEEE TCC 2023},
+Andreoli et al.~\cite{RTMongo}, and the subsequent work by Cucinotta et al.~\cite{PriorityMongoDB},
 propose per-request prioritization mechanisms to improve responsiveness in NoSQL Database-as-a-Service (DBaaS) platforms.
 Although our system addresses performance at a different architectural level, similar prioritization techniques could be integrated into our implementation.
 
 A parallel line of research, addressing similar concerns from a systems perspective,
 is that of CPU schedulers for real-time processes.
-As developed by Abeni et al.~\cite{Abeni?} for the Linux kernel with \texttt{SCHED\_DEADLINE},
+As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
 the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
 Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto standard\footnote{
     \url{https://crates.io/crates/tokio} reports over 416 million all-time downloads,
     compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
-    See also: \url{https://corrode.dev/blog/async/}
-} for asynchronous I/O in Rust -- uses a multi-threaded work-stealing scheduler~\cite{Blumofe & Leiserson, 1994–1999},
+} for asynchronous in Rust -- uses a multi-threaded work-stealing scheduler~\cite{WorkStealingScheduler}, % TODO: Aggiungi qualcosa di succoso dal paper.
 which could potentially be enhanced by integrating a more advanced scheduling algorithm.
 
-% TODO: MicroFuge ha molto senso sia menzionato, dato che fa quello che ho detto.
-
+% TODO: MicroFuge ha molto senso sia menzionato, dato che fa _circa_ quello che ho detto.

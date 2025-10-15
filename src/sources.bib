@@ -52,44 +52,6 @@
     abstract = {This specification defines UUIDs (Universally Unique IDentifiers) -- also known as GUIDs (Globally Unique IDentifiers) -- and a Uniform Resource Name namespace for UUIDs. A UUID is 128 bits long and is intended to guarantee uniqueness across space and time. UUIDs were originally used in the Apollo Network Computing System (NCS), later in the Open Software Foundation's (OSF's) Distributed Computing Environment (DCE), and then in Microsoft Windows platforms. This specification is derived from the OSF DCE specification with the kind permission of the OSF (now known as "The Open Group"). Information from earlier versions of the OSF DCE specification have been incorporated into this document. This document obsoletes RFC 4122.},
 }
 
-@conference{RT-Mongo,
-    author = {Remo Andreoli and Tommaso Cucinotta and Dino Pedreschi},
-    title = {RT-MongoDB: A NoSQL Database with Differentiated Performance},
-    booktitle = {Proceedings of the 11th International Conference on Cloud Computing and Services Science - CLOSER},
-    year = {2021},
-    pages = {77-86},
-    publisher = {SciTePress},
-    organization = {INSTICC},
-    doi = {10.5220/0010452400770086},
-    isbn = {978-989-758-510-4},
-    issn = {2184-5042},
-}
-
-@article{Andreoli2023,
-    doi = {10.1109/tcc.2023.3292031},
-    url = {https://doi.org/10.1109%2Ftcc.2023.3292031},
-    year = 2023,
-    publisher = {Institute of Electrical and Electronics Engineers ({IEEE})},
-    pages = {1--14},
-    author = {Remo Andreoli and Tommaso Cucinotta and Daniel Bristot De Oliveira},
-    title = {Priority-Driven Differentiated Performance for {NoSQL} Database-As-a-Service},
-    journal = {{IEEE} Transactions on Cloud Computing}
-}
-
-@article{Mongo,
-    author = {William Schultz and Siyuan Zhou and Stavros Tripakis},
-    title = {Design and Verification of a Logless Dynamic Reconfiguration Protocol in MongoDB Replication},
-    journal = {CoRR},
-    volume = {abs/2102.11960},
-    year = {2021},
-    url = {https://arxiv.org/abs/2102.11960},
-    eprinttype = {arXiv},
-    eprint = {2102.11960},
-    timestamp = {Tue, 02 Mar 2021 12:11:01 +0100},
-    biburl = {https://dblp.org/rec/journals/corr/abs-2102-11960.bib},
-    bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
 @article{Cassandra,
     author = {Lakshman, Avinash and Malik, Prashant},
     title = {Cassandra: a decentralized structured storage system},
@@ -109,7 +71,7 @@
     numpages = {6}
 }
 
-@InProceedings{MerkleTree,
+@inproceedings{MerkleTree,
     author = "Merkle, Ralph C.",
     editor = "Pomerance, Carl",
     title = "A Digital Signature Based on a Conventional Encryption Function",
@@ -199,4 +161,104 @@
     year = 2012,
     month = oct,
     abstract = {This specification describes how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. Any party in possession of a bearer token (a "bearer") can use it to get access to the associated resources (without demonstrating possession of a cryptographic key). To prevent misuse, bearer tokens need to be protected from disclosure in storage and in transport. {[}STANDARDS-TRACK{]}},
+}
+
+@inbook{RTDBS,
+    author = {Kao, Ben and Garc\'{\i}a-Molina, H\'{e}ctor},
+    title = {An overview of real-time database systems},
+    year = {1995},
+    isbn = {0130833487},
+    publisher = {Prentice-Hall, Inc.},
+    address = {USA},
+    booktitle = {Advances in Real-Time Systems},
+    pages = {463–486},
+    numpages = {24}
+}
+
+@inproceedings{SWIM,
+    author = {Das, Abhinandan and Gupta, Indranil and Motivala, Ashish},
+    title = {SWIM: Scalable Weakly-consistent Infection-style Process Group Membership Protocol},
+    year = {2002},
+    isbn = {0769515975},
+    publisher = {IEEE Computer Society},
+    address = {USA},
+    abstract = {Several distributed peer-to-peer applications require weakly-consistent knowledge of process group membership information at all participating processes. SWIM is a generic software module that offers this service for large-scale process groups. The SWIM effort is motivated by the unscalability of traditional heart-beating protocols, which either impose network loads that grow quadratically with group size, or compromise response times or false positive frequency w.r.t. detecting process crashes. This paper reports on the design, implementation and performance of the SWIM sub-system on a large cluster of commodity PCs.Unlike traditional heartbeating protocols, SWIM separates the failure detection and membership update dissemination functionalities of the membership protocol. Processes are monitored through an efficient peer-to-peer periodic randomized probing protocol. Both the expected time to first detection of each process failure, and the expected message load per member, do not vary with group size. Information about membership changes, such as process joins, drop-outs and failures, is propagated via piggybacking on ping messages and acknowledgments. This results in a robust and fast infection style (also epidemic or gossip-style) of dissemination.The rate of false failure detections in the SWIM system is reduced by modifying the protocol to allow group members to suspect a process before declaring it as failed - this allows the system to discover and rectify false failure detections. Finally, the protocol guarantees a deterministic time bound to detect failures.Experimental results from the SWIM prototype are presented. We discuss the extensibility of the design to a WAN-wide scale.},
+    booktitle = {Proceedings of the 2002 International Conference on Dependable Systems and Networks},
+    pages = {303–312},
+    numpages = {10},
+    series = {DSN '02}
+}
+
+@article{Mongo,
+    author = {William Schultz and Siyuan Zhou and Stavros Tripakis},
+    title = {Design and Verification of a Logless Dynamic Reconfiguration Protocol in MongoDB Replication},
+    journal = {CoRR},
+    volume = {abs/2102.11960},
+    year = {2021},
+    url = {https://arxiv.org/abs/2102.11960},
+    eprinttype = {arXiv},
+    eprint = {2102.11960},
+    timestamp = {Tue, 02 Mar 2021 12:11:01 +0100},
+    biburl = {https://dblp.org/rec/journals/corr/abs-2102-11960.bib},
+    bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{PriorityMongoDB,
+    author = {Andreoli, Remo and Cucinotta, Tommaso and De Oliveira, Daniel Bristot},
+    journal = {IEEE Transactions on Cloud Computing},
+    title = {Priority-Driven Differentiated Performance for NoSQL Database-as-a-Service},
+    year = {2023},
+    volume = {11},
+    number = {4},
+    pages = {3469-3482},
+    keywords = {Cloud computing;Throughput;Databases;Time factors;Message systems;Proposals;Scalability;Cloud computing;differentiated performance;NoSQL;cloud storage;MongoDB},
+    doi = {10.1109/TCC.2023.3292031}
+}
+
+@conference{RTMongo,
+    author = {Remo Andreoli and Tommaso Cucinotta and Dino Pedreschi},
+    title = {RT-MongoDB: A NoSQL Database with Differentiated Performance},
+    booktitle = {Proceedings of the 11th International Conference on Cloud Computing and Services Science - CLOSER},
+    year = {2021},
+    pages = {77-86},
+    publisher = {SciTePress},
+    organization = {INSTICC},
+    doi = {10.5220/0010452400770086},
+    isbn = {978-989-758-510-4},
+    issn = {2184-5042},
+}
+
+@article{WorkStealingScheduler,
+    author = {Blumofe, Robert D. and Leiserson, Charles E.},
+    title = {Scheduling multithreaded computations by work stealing},
+    year = {1999},
+    issue_date = {Sept. 1999},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {46},
+    number = {5},
+    issn = {0004-5411},
+    url = {https://doi.org/10.1145/324133.324234},
+    doi = {10.1145/324133.324234},
+    abstract = {This paper studies the problem of efficiently schedulling fully strict (i.e., well-structured) multithreaded computations on parallel computers. A popular and practical method of scheduling this kind of dynamic MIMD-style computation is “work stealing,” in which processors needing work steal computational threads from other processors. In this paper, we give the first provably good work-stealing scheduler for multithreaded computations with dependencies.Specifically, our analysis shows that the expected time to execute a fully strict computation on P processors using our work-stealing scheduler is T1/P + O(T ∞ , where T1 is the minimum serial execution time of the multithreaded computation and (T ∞ is the minimum execution time with an infinite number of processors. Moreover, the space required by the execution is at most S1P, where S1 is the minimum serial space requirement. We also show that the expected total communication of the algorithm is at most O(PT ∞( 1 + nd)Smax), where Smax is the size of the largest activation record of any thread and nd is the maximum number of times that any thread synchronizes with its parent. This communication bound justifies the folk wisdom that work-stealing schedulers are more communication efficient than their work-sharing counterparts. All three of these bounds are existentially optimal to within a constant factor.},
+    journal = {J. ACM},
+    month = sep,
+    pages = {720–748},
+    numpages = {29},
+    keywords = {work stealing, thread scheduling, randomized algorithm, multithreading, multiprocessor, critical-path length}
+}
+
+@article{Deadline,
+    author = {Lelli, Juri and Scordino, Claudio and Abeni, Luca and Faggioli, Dario},
+    title = {Deadline scheduling in the Linux kernel},
+    journal = {Software: Practice and Experience},
+    volume = {46},
+    number = {6},
+    pages = {821-839},
+    keywords = {real-time, resource-reservation, scheduling, operating system, Linux},
+    doi = {https://doi.org/10.1002/spe.2335},
+    url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/spe.2335},
+    eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/spe.2335},
+    abstract = {Summary During the last decade, there has been a considerable interest in using Linux in real-time systems, especially for industrial control. The simple and elegant design of Linux guarantees reliability and very good performance, while its open-source license allows to modify and change the source code according to the user needs. However, Linux has been designed to be a general-purpose operating system. Therefore, it presents some issues like unpredictable latencies and limited support for real-time scheduling. In this paper, we present our experience in the design and implementation of the real-time scheduler that has been recently included in the Linux kernel. The scheduler is based on the Resource Reservation paradigm, which allows to enforce temporal isolation between the running tasks. We describe the genesis of the project, the challenges we have encountered, the implementation details and the API offered to the programmers. Then, we show the experimental results measured on a real hardware. Copyright © 2015 John Wiley \& Sons, Ltd.},
+    year = {2016}
 }
