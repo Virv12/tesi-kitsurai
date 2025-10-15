@@ -1,51 +1,55 @@
 \section{Conclusions}
 \label{sec:conclusions}
-% - works? really works?
 
 The \textit{Kitsurai} project was developed with the goal of creating a distributed key-value store
 capable of offering predictable and guaranteed performance in multi-tenant environments,
-a requirement often overlooked in major existing open-source solutions.
+matching enterprise solutions like DynamoDB~\cite{Dynamo2022},
+a requirement often overlooked in major existing open-source solutions such as Cassandra~\cite{Cassandra} and MongoDB~\cite{RT-Mongo}.
 
-The developed system has ample margin for improvements, but demonstrates how the core techniques
-can be used to create a database fit for real-time guarantees.
+While the developed system still leaves ample room for improvement,
+it demonstrates how the proposed techniques can be effectively used to design
+a distributed database suitable for real-time performance guarantees.
 
 The experimental results confirm the validity of the approach, as the system:
 \begin{itemize}
-    \item managed to maintain controlled performance even under high load and in the presence of noisy clients,
+    \item maintained controlled performance even under high load and in the presence of noisy clients,
     ensuring effective isolation between tenants and guaranteeing each a minimum share of bandwidth and an acceptable maximum latency;
-    \item managed to scale to within variance of the expected rate for multiple configurations.
+    \item achieved performance gains due to scaling across multiple configurations, remaining within a small variance of the expected rate.
 \end{itemize}
-Even thought testing was conducted on non-enterprise hardware due to availability,
-we could expect at least to match the result here presented when switching to high-end enterprise hardware.
+Although testing was conducted on non-enterprise hardware due to resource constraints,
+similar or improved performance is expected on high-end production systems.
 
 \subsection{Limitations and Future Work}
 \label{subsec:limitations+future-work}
 
-Despite the promising results, the current implementation has some limitations that provide opportunities for future work.
+Despite the promising results, the current implementation presents several limitations that open up
+opportunities for future research and development.
 
-The developed algorithm has been developed for a static set of peers,
-but dynamic peers are a possibility.
-In particular, a catch-up protocol for reintegrating nodes after prolonged outages
-or after joining the cluster would have to be developed.
+The current system assumes a static set of peers,
+whereas real-world deployments require the ability to dynamically join and leave the cluster.
+Future work should include the development of a catch-up protocol for reintegrating nodes after outages or cluster membership changes,
+as can be seen in Dynamo~\cite{Dynamo2007} and its derivatives.
 
-On the same note, table's bandwidth parameter are static and cannot be changed.
-An extension to the system could revise the table allocation and key distribution to allow changes.
-% A possibility could be to allow nesting of the allocation rings...
-Relaxing the uniform key access assumption, a system like Dynamo's split-for-hot could then be implemented as an internal auto-scaler,
-by using the developed dynamic table API\@.
+Similarly, table bandwidth parameters are currently static and cannot be reconfigured at runtime.
+A natural extension would involve dynamic reallocation of table bandwidth and key-space distribution,
+enabling live adjustment of throughput guarantees.
+Relaxing the uniform key-access assumption would further allow
+an internal auto-scaling mechanism akin to Dynamo’s partition-splitting strategy~\cite{Dynamo2007},
+implemented using the dynamic table API\@.
 
-Encryption is already supported by the underlying HTTP/2 server's implementation,
-exposing the configuration to the CLI is most of the work to enable TLS on both the client's HTTP and for the internal RPC server.
-Further testing could also be done to test HTTP/3 and QUIC as an alternative to HTTP/2, % TODO: Cita?
-which was not done due to the requirement of TLS\@.
+While encryption is already supported by the underlying HTTP/2 server implementation,
+most of the work required to enable TLS consists of exposing the configuration through the CLI\@.
+Additional experimentation with HTTP/3 and QUIC~\cite{QUIC2021} could further improve latency and connection management.
 
-Strategies for optimal capacity management of nodes, especially when tables have unbalanced requirements in terms of bandwidth or storage space,
-coupled with the likely need to improve the bandwidth limitation model to allow separate limits for get and set operations.
-An approach like that of X-Stor's RUs or DynamoDB's RCUs and WCUs could be a nice addition to the current capabilities.
+Future work could also explore more sophisticated capacity management strategies across nodes,
+particularly when tables have unbalanced bandwidth or storage requirements.
+Enhancing the current bandwidth-limiting model to support separate limits for read and write operations
+could be beneficial, drawing inspiration from DynamoDB’s Read and Write Capacity Units (RCUs and WCUs)~\cite{Dynamo2022, DynamoWhitepaper}
+or X-Stor’s Request Units (RUs)~\cite{Lei2024}.
 
-Many other features can interestingly be built on top of the existing system, as a series of middlewares:
+Several additional features could be built atop the existing system as middleware layers:
 \begin{itemize}
-    \item An access control model for fine-grained permission management by using industry standard technologies like OAuth/JWT; % TODO: Cita qualcosa
-    \item Built-in consistency options, like timestamps or Dynamo's vector clocks, could also be implemented transparently;
-    \item Assigning custom names to tables could also be built on top, storing the table's translations in the database itself.
+    \item A fine-grained access control mechanism based on standard authentication and authorization frameworks such as OAuth 2.0 or JWT~\cite{RFC7519};
+    \item Built-in consistency options, including timestamp ordering or Dynamo-style vector clocks~\cite{Dynamo2007}, which could be provided transparently to the user;
+    \item User-friendly table naming, implemented as a metadata layer stored within the system itself.
 \end{itemize}
