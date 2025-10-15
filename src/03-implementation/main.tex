@@ -38,130 +38,30 @@ operation fails and an error is returned to the client.
 
 \input{03-implementation/ring.tex}
 
-\subsection{Tables}
-\label{subsec:impl-tables}
+\input{03-implementation/table.tex}
 
-We distinguish between a table's \emph{local state}, maintained independently
-by each node in the cluster and might differ among them, and its \emph{global
-state}, derived from the combination of the local states over all nodes.
+\subsection{RPC}
+\label{subsec:rpc}
 
-Locally, a table is in one of four phases: \emph{unknown}, \emph{prepared},
-\emph{created}, or \emph{deleted}:
-\begin{itemize}
-    \item \emph{unknown}: the node is not aware of the table.
-    \item \emph{prepared}: some bandwidth is allocated, but the table has not
-        yet been created.
-    \item \emph{created}: the table is fully operational on that node.
-    \item \emph{deleted}: the table is no longer operational on that node.
-\end{itemize}
-The local state of a table can only progress in phase monotonically in the order:
-\[
-    \emph{unknown} \rightarrow \emph{prepared} \rightarrow \emph{created}
-    \rightarrow \emph{deleted}.
-\]
+Nodes communicate with each other using a custom RPC protocol over HTTP/2, it
+was chosen for its multiplexing capabilities, allowing multiple simultaneous
+requests over a single TCP connection, reducing latency and resource
+consumption.
+For efficiency, nodes maintain persistent connections with each other, reusing
+them for multiple requests, we have observed that a single connection is not
+able to saturate the machine's resources, so each node maintains up to 20
+connections with each other node.
 
-Globally, a table is in one of three phases: \emph{unknown}, \emph{created} or
-\emph{deleted}. A table cannot be globally \emph{prepared}, as this state
-represents an intermediate phase during creation.
-\begin{itemize}
-    \item \emph{deleted}: at least one node is locally \emph{deleted}.
-    \item \emph{created}: all responsible nodes for the table are locally
-        \emph{created} and the table is not globally \emph{deleted}.
-    \item \emph{unknown}: it is neither globally \emph{created} nor globally
-        \emph{deleted}.
-\end{itemize}
-The global state of a table can also only progress in phase monotonically in the order:
-\[
-    \emph{unknown} \rightarrow \emph{created} \rightarrow \emph{deleted}.
-\]
-
-\subsubsection{Gossip}
-\label{subsubsec:gossip}
-
-The local state of a table is synchronized among nodes though the use of a
-Gossip protocol, this allows the local state of a table to converge towards the
-global state.
-
-Each node in the cluster initiates a \emph{gossip} exchange with a randomly
-chosen peer every second. If the peer is unavailable, the exchange fails and
-the node will try again in the next second with a different peer.
-
-During the exchange, the two nodes synchronize the metadata of table that are
-in the locally \emph{created} or locally \emph{deleted} for at least one of the
-two nodes. Tables that are locally \emph{prepared} are considered the same as
-\emph{unknown}.
-
-Conflicts are resolved by a phase order in which \emph{deleted} $\succ$
-\emph{created} $\succ$ \emph{prepared} $\succ$ \emph{unknown}; the more
-advanced phase prevails. If both nodes report the same phase for a table, their
-metadata must be identical; otherwise the system is inconsistent.
-
-Merkle trees~\cite{MerkleTree} are used to efficiently detect divergences
-allowing nodes to synchronize only the differing tables.
-
-\subsubsection{Creation}
-\label{subsubsec:creation}
-
-To create a table, the following steps are performed:
+A request-response cycle consists of the following steps:
 \begin{enumerate}
-    \item The client connects to a node of its choice, which acts as a
-        \emph{router}.
-    \item The client sends the table's parameters \texttt{b}, \texttt{n},
-        \texttt{r}, and \texttt{w} to the router.
-    \item The router generates an \texttt{id} for the table and computes the
-        effective bandwidth $S = b \cdot n$ to account for replication.
-    \item\label{step:prepare} The router iterates over the nodes in the
-        cluster, skipping unavailable ones, requesting a bandwidth allocation
-        for the new table, allocating up to $b$ on each availability zone. Each
-        node can allocate as much bandwidth as it has available, up to the
-        requested amount, after performing the allocation, the node marks the
-        table as locally \emph{prepared}.
-    \item Once sufficient bandwidth is obtained (at least $S$), the router
-        defines the list of responsible nodes and their respective bandwidths
-        $s_i$.
-    \item\label{step:commit} The router asks the nodes that responded in
-        step~\ref{step:prepare} to commit the table; on these nodes the table
-        enters the \emph{created} state.
-    \item The router returns the \texttt{id} of the new table to the client.
+    \item The client serializes the request into a binary format.
+    \item The client sends the request in the body of an HTTP/2 request.
+    \item The server reads, deserializes and processes the request.
+    \item The server serializes the response into a binary format.
+    \item The server sends the reponse in the body of the HTTP/2 response.
+    \item The client reads and deserializes the response.
 \end{enumerate}
 
-If all steps succeed the table is created successfully, in particular if the
-step~\ref{step:commit} succeeds, all the responsible nodes will have marked the
-table as locally \emph{created}, and thus the table will be considered globally
-\emph{created}.
-
-If any node fails to respond in step~\ref{step:commit}, the router will
-consider the table creation failed, and will return an error to the client. It
-will also inform the nodes that responded in step~\ref{step:prepare} to delete
-the table, allowing the bandwidth to be freed.
-
-If the router fails between step~\ref{step:prepare} and step~\ref{step:commit},
-some nodes will have marked the table as locally \emph{prepared}, wasting the
-reserved bandwidth. To avoid this, each node that participates in the creation
-of a table maintains a timeout of 1 minute. If the node does not receive a
-commit request within this time, it will mark the table as locally
-\emph{deleted}, freeing the allocated bandwidth.
-
-\subsubsection{Deletion}
-\label{subsubsec:deletion}
-
-To delete a table, it is sufficient for a node to mark it as locally
-\emph{deleted}. The table will then be considered globally \emph{deleted} and,
-thanks to the Gossip protocol, the other nodes will synchronize and the table
-will be considered deleted by all nodes.
-
-Even if it's not strictly necessary, the node receiving the deletion request
-acts as a router, informing all responsible nodes of the deletion, to allow
-them to free the allocated bandwidth and storage space more quickly, and
-prevent further read or write requests to the deleted table.
-
-%\subsubsection{Metadata}
-%\label{subsubsec:metadata}
-
-%The database contains a special table, not accessible to users, identified by
-%a UUIDv8 generated from the 16 bytes \texttt{kitsuraimetadata}. This table
-%contains the metadata of all tables created in the cluster, including their
-%parameters and responsible nodes. Thanks to this, every node can act as a
-%router for \texttt{get} and \texttt{set} requests. The metadata table,
-%identified by a UUIDv8, cannot conflict with the UUIDv7 generated for user
-%tables, since the version is encoded within a UUID\@.
+For serialization, we use the
+\emph{postcard}\footnote{\url{https://github.com/jamesmunns/postcard}} library,
+which provides a compact binary format with minimal overhead.

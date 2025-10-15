@@ -18,21 +18,22 @@ Every table contains key-value pairs, where both keys and values are byte
 arrays.
 
 A Kitsurai system operates on a \emph{cluster} composed of a static set of
-nodes, which may occasionally be unavailable.
-A \emph{node} corresponds to an instance of the program running on a physical
-or virtual machine.
-Each node can be tagged with a string identifying its \emph{Availability Zone}
-(see Section~\ref{subsec:availability-zones}).
-Every node maintains a copy of the metadata for all tables.
+nodes, a \emph{node} corresponds to an instance of the program running on a
+physical or virtual machine.
+Each node may be temporarily unavailable due to failures or network partitions,
+the system is designed to be resilient to such events and to continue operating
+as long as a sufficient number of nodes are available.
+Each node can be assigned to an \emph{Availability Zone} (see
+Section~\ref{subsec:availability-zones}).
 
 \subsection{Tables}
 \label{subsec:tables}
 
 Each table has four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{bandwidth} or \texttt{b}: the total number of requests
-        (\texttt{get} and \texttt{set}) that the system must guarantee for the
-        table, expressed in requests per second.
+    \item \texttt{bandwidth} or \texttt{b}: the number of requests, as
+        perceived by the client, that the system must guarantee for the table,
+        expressed in requests per second.
     \item \texttt{n}: the replication factor for each key-value pair.
     \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes
         that must successfully respond to a read request.
@@ -40,34 +41,37 @@ Each table has four parameters specified by the user at creation time:
         that must successfully respond to a write request.
 \end{itemize}
 
-And another four parameters computed automatically:
+Parameters must satisfy the constraints $1 \leq r, w \leq n$ and $b > 0$.
+
+Additionally, the system computes four parameters automatically:
 \begin{itemize}
     \item \texttt{id}: a UUID identifying the table, generated at creation.
-    \item $S$: the effective bandwidth of the table considering the replication
-        effect, computed as $S = b \cdot n$.
     \item \texttt{responsible\_nodes}: the list of nodes on which the table's
         key-value pairs are distributed, chosen to guarantee replication and
         data availability.
-    \item $s_i$: the bandwidth allocated by node $i$ for the table, such that
-        $\sum s_i = S$.
+    \item $s_i$: the bandwidth allocated by node $i$ for the table.
+    \item $S$: the total bandwidth allocated for the table, computed as $S =
+        \sum s_i$ or equivalently $S = b \cdot n$.
 \end{itemize}
 
 \subsection{Client API}
 \label{subsec:interface}
 
 The system exposes the public API through a REST interface over HTTP.
-The client can send requests to any node in the cluster, which acts as a
-\emph{router} to forward the request to the appropriate nodes.
+Since every node maintains a copy of the metadata for all tables, the client
+can send requests to any node in the cluster, which acts as a \emph{router} to
+forward the request to the appropriate nodes.
 
 \subsubsection{table-create}
 \label{subsubsec:table-create}
 
 The client sends four parameters: \texttt{bandwidth}, \texttt{n}, \texttt{r},
 and \texttt{w}.
-The system allocates the requested bandwidth and returns the generated
-\texttt{id} of the new table.
-If the requested bandwidth cannot be allocated, the operation fails and returns
-an error.
+The system allocates enough bandwidth on the nodes to satisfy the requested
+parameters, creates the table, and returns the generated \texttt{id} of the new
+table.
+If it's not possible to satisfy the requested parameters, the operation fails
+and returns an error.
 
 \subsubsection{table-delete}
 \label{subsubsec:table-delete}
@@ -106,7 +110,8 @@ previous value to subsequent reads until it receives a new write.
 
 Consistency guarantees can be strengthened by using the condition $r + w > n$.
 In that case, at least one node involved in the read will have received the
-latest write, thus ensuring more consistent reads.
+latest write, thus ensuring that at least one of the returned values is the
+most recent.
 However, it is the client's responsibility to determine which of the returned
 values is the most recent, since the system does not provide timestamps or
 version identifiers.
@@ -128,7 +133,7 @@ accessible from other zones.
 In a multi-tenant system such as Kitsurai, it is necessary to prevent a single
 client from monopolizing resources and compromising the performance of others.
 For this reason, Kitsurai implements a throughput throttling mechanism that
-guarantees each client the bandwidth requested at table creation, even in the
+guarantees each table the bandwidth requested at table creation, even in the
 presence of high and concurrent loads.
 
 \subsection{Bandwidth allocation model}
