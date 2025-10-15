@@ -39,17 +39,17 @@ implemented using the dynamic table API\@.
 
 While encryption is already supported by the underlying HTTP/2 server implementation,
 most of the work required to enable TLS consists of exposing the configuration through the CLI\@.
-Additional experimentation with HTTP/3 and QUIC~\cite{QUIC2021} could further improve latency and connection management.
+Additional experimentation with HTTP/3~\cite{HTTP3} and QUIC~\cite{QUIC} could further improve latency and connection management.
 
 Future work could also explore more sophisticated capacity management strategies across nodes,
 particularly when tables have unbalanced bandwidth or storage requirements.
 Enhancing the current bandwidth-limiting model to support separate limits for read and write operations
 could be beneficial, drawing inspiration from DynamoDB’s Read and Write Capacity Units (RCUs and WCUs)~\cite{Dynamo2022, DynamoWhitepaper}
-or X-Stor’s Request Units (RUs)~\cite{Lei2024}.
+or X-Stor’s Request Units (RUs)~\cite{XStor}.
 
 Several additional features could be built atop the existing system as middleware layers:
 \begin{itemize}
-    \item A fine-grained access control mechanism based on standard authentication and authorization frameworks such as OAuth 2.0 or JWT~\cite{RFC7519};
+    \item A fine-grained access control mechanism based on standard authentication and authorization frameworks such as OAuth or JWT~\cite{OAuth2, JWT};
     \item Built-in consistency options, including timestamp ordering or Dynamo-style vector clocks~\cite{Dynamo2007}, which could be provided transparently to the user;
     \item User-friendly table naming, implemented as a metadata layer stored within the system itself.
 \end{itemize}
