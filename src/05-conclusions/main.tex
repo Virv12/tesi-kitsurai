@@ -1,21 +1,51 @@
 \section{Conclusions}
 \label{sec:conclusions}
+% - works? really works?
 
-The \textit{Kitsurai} project was developed with the goal of creating a distributed key-value store capable of offering predictable and guaranteed performance in multi-tenant environments, a requirement often overlooked in major existing open-source solutions.
+The \textit{Kitsurai} project was developed with the goal of creating a distributed key-value store
+capable of offering predictable and guaranteed performance in multi-tenant environments,
+a requirement often overlooked in major existing open-source solutions.
 
-The experimental results confirm the validity of the approach: the system manages to maintain controlled performance even under high load and in the presence of malicious clients, ensuring effective isolation between tenants and guaranteeing each a minimum share of bandwidth and an acceptable maximum latency.
+The developed system has ample margin for improvements, but demonstrates how the core techniques
+can be used to create a database fit for real-time guarantees.
 
-\subsection{Limitations}
-\label{subsec:limitations}
-
-Despite the promising results, the current implementation has some limitations that provide opportunities for future work. In particular, the system still lacks:
-
+The experimental results confirm the validity of the approach, as the system:
 \begin{itemize}
-    \item An access control model for fine-grained permission management.
-    \item A catch-up protocol for reintegrating nodes after prolonged outages.
-    \item Robust mechanisms for conflict resolution during read operations.
-    \item The ability for users to assign custom names to tables.
-    \item Strategies for optimal capacity management of nodes, especially when tables have unbalanced requirements in terms of bandwidth or storage space.
-    \item Support for dynamic addition and removal of nodes from the system.
-    \item A more performant and encrypted RPC protocol based on existing technologies, for example QUIC~\cite{QUIC}.
+    \item managed to maintain controlled performance even under high load and in the presence of noisy clients,
+    ensuring effective isolation between tenants and guaranteeing each a minimum share of bandwidth and an acceptable maximum latency;
+    \item managed to scale to within variance of the expected rate for multiple configurations.
+\end{itemize}
+Even thought testing was conducted on non-enterprise hardware due to availability,
+we could expect at least to match the result here presented when switching to high-end enterprise hardware.
+
+\subsection{Limitations and Future Work}
+\label{subsec:limitations+future-work}
+
+Despite the promising results, the current implementation has some limitations that provide opportunities for future work.
+
+The developed algorithm has been developed for a static set of peers,
+but dynamic peers are a possibility.
+In particular, a catch-up protocol for reintegrating nodes after prolonged outages
+or after joining the cluster would have to be developed.
+
+On the same note, table's bandwidth parameter are static and cannot be changed.
+An extension to the system could revise the table allocation and key distribution to allow changes.
+% A possibility could be to allow nesting of the allocation rings...
+Relaxing the uniform key access assumption, a system like Dynamo's split-for-hot could then be implemented as an internal auto-scaler,
+by using the developed dynamic table API\@.
+
+Encryption is already supported by the underlying HTTP/2 server's implementation,
+exposing the configuration to the CLI is most of the work to enable TLS on both the client's HTTP and for the internal RPC server.
+Further testing could also be done to test HTTP/3 and QUIC as an alternative to HTTP/2, % TODO: Cita?
+which was not done due to the requirement of TLS\@.
+
+Strategies for optimal capacity management of nodes, especially when tables have unbalanced requirements in terms of bandwidth or storage space,
+coupled with the likely need to improve the bandwidth limitation model to allow separate limits for get and set operations.
+An approach like that of X-Stor's RUs or DynamoDB's RCUs and WCUs could be a nice addition to the current capabilities.
+
+Many other features can interestingly be built on top of the existing system, as a series of middlewares:
+\begin{itemize}
+    \item An access control model for fine-grained permission management by using industry standard technologies like OAuth/JWT; % TODO: Cita qualcosa
+    \item Built-in consistency options, like timestamps or Dynamo's vector clocks, could also be implemented transparently;
+    \item Assigning custom names to tables could also be built on top, storing the table's translations in the database itself.
 \end{itemize}
