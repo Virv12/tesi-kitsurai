@@ -12,88 +12,136 @@
 %- No Consistenza: si fa con un layer aggiuntivo
 %- API client + tabelle senza nome
 
-The database is organized into \emph{tables}, each identified by a version~7 UUID~\cite{rfc9562}.
-Every table contains key-value pairs, where both keys and values are byte arrays.
+The database is organized into \emph{tables}, each identified by a
+UUID~\cite{rfc9562}.
+Every table contains key-value pairs, where both keys and values are byte
+arrays.
 
-A Kitsurai system operates on a \emph{cluster} composed of a static set of nodes, which may occasionally be unavailable.
-A \emph{node} corresponds to an instance of the program running on a physical or virtual machine.
-Each node can be tagged with a string identifying its \emph{Availability Zone} (see Section~\ref{subsec:availability-zones}).
+A Kitsurai system operates on a \emph{cluster} composed of a static set of
+nodes, which may occasionally be unavailable.
+A \emph{node} corresponds to an instance of the program running on a physical
+or virtual machine.
+Each node can be tagged with a string identifying its \emph{Availability Zone}
+(see Section~\ref{subsec:availability-zones}).
 Every node maintains a copy of the metadata for all tables.
-
-\subsection{Client API}
-\label{subsec:interface}
-
-Four main operations are supported:
-\begin{itemize}
-    \item \texttt{create-table}: creates a new table with the specified parameters.
-    \item \texttt{delete-table}: deletes an existing table.
-    \item \texttt{get}: retrieves the value associated with a key in a table.
-    \item \texttt{set}: sets the value associated with a key in a table.
-\end{itemize}
-
-Any of these requests can be sent to a node chosen by the client, which acts as a \emph{router} to forward the request to the nodes responsible for the specified table.
 
 \subsection{Tables}
 \label{subsec:tables}
 
 Each table has four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{bandwidth} or \texttt{b}: the total number of requests (\texttt{get} and \texttt{set}) that the system must guarantee for the table, expressed in requests per second.
+    \item \texttt{bandwidth} or \texttt{b}: the total number of requests
+        (\texttt{get} and \texttt{set}) that the system must guarantee for the
+        table, expressed in requests per second.
     \item \texttt{n}: the replication factor for each key-value pair.
-    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes that must successfully respond to a read request.
-    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes that must successfully respond to a write request.
+    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes
+        that must successfully respond to a read request.
+    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes
+        that must successfully respond to a write request.
 \end{itemize}
 
 And another four parameters computed automatically:
 \begin{itemize}
-    \item \texttt{id}: a UUIDv7 identifying the table, generated at creation.
-    \item $\Sigma$: the effective bandwidth of the table considering the replication effect, computed as $\displaystyle \Sigma = b \cdot n$.
-    \item \texttt{responsible\_nodes}: the list of nodes on which the table's key-value pairs are distributed, chosen to guarantee replication and data availability.
-    \item $b_i$: the bandwidth allocated by node $i$ for the table, such that $\displaystyle \sum b_i = \Sigma$.
+    \item \texttt{id}: a UUID identifying the table, generated at creation.
+    \item $S$: the effective bandwidth of the table considering the replication
+        effect, computed as $S = b \cdot n$.
+    \item \texttt{responsible\_nodes}: the list of nodes on which the table's
+        key-value pairs are distributed, chosen to guarantee replication and
+        data availability.
+    \item $s_i$: the bandwidth allocated by node $i$ for the table, such that
+        $\sum s_i = S$.
 \end{itemize}
 
-Each table is managed by a set of nodes, called \emph{responsible nodes}, chosen to guarantee replication and data availability.
-On each node, a table can be in one of three states: \emph{prepared}, \emph{created}, or \emph{deleted}.
-Tables can only progress in state in the order: \emph{prepared} $\rightarrow$ \emph{created} $\rightarrow$ \emph{deleted}.
-A table is \emph{prepared} when the requested bandwidth has been allocated, but it has not yet been created.
-A table is considered \emph{created} when all responsible nodes consider it so; it is considered \emph{deleted} when at least one node marks it as such.
-The state of a table is synchronized among nodes through the \emph{Gossip} protocol (see Section~\ref{subsec:gossip}).
+\subsection{Client API}
+\label{subsec:interface}
+
+The system exposes the public API through a REST interface over HTTP.
+The client can send requests to any node in the cluster, which acts as a
+\emph{router} to forward the request to the appropriate nodes.
+
+\subsubsection{table-create}
+\label{subsubsec:table-create}
+
+The client sends four parameters: \texttt{bandwidth}, \texttt{n}, \texttt{r},
+and \texttt{w}.
+The system allocates the requested bandwidth and returns the generated
+\texttt{id} of the new table.
+If the requested bandwidth cannot be allocated, the operation fails and returns
+an error.
+
+\subsubsection{table-delete}
+\label{subsubsec:table-delete}
+
+The client sends the \texttt{id} of the table to be deleted.
+The system marks the table as deleted and frees the allocated resources.
+
+\subsubsection{item-get}
+\label{subsubsec:item-get}
+
+The client sends the \texttt{id} of the table and the \texttt{key} to be
+retrieved.
+The system forwards the request to the responsible nodes and waits for at least
+\texttt{r} successful responses.
+If the operation succeeds, it returns a list of the values received from the
+nodes; otherwise, it returns an error.
+
+\subsubsection{item-set}
+\label{subsubsec:item-set}
+
+The client sends the \texttt{id} of the table, the \texttt{key}, and the
+\texttt{value} to be set.
+The system forwards the request to the responsible nodes and waits for at least
+\texttt{w} successful responses.
+If the operation succeeds, it returns a success message; otherwise, it returns
+an error.
 
 \subsection{Consistency model}
 \label{subsec:consistency-model}
 
-The system does not guarantee any form of consistency: there is no synchronization mechanism among nodes.
-If a write does not reach a node because it is unavailable, that node will continue to return the previous value until it receives a new write.
+The system does not guarantee any form of consistency on item reads and writes.
+A value written to a key is guaranteed to be stored on at least \texttt{w}
+nodes, but it will never be propagated to other nodes.
+Thus if a node is unavailable during a write, it will continue to return the
+previous value to subsequent reads until it receives a new write.
 
 Consistency guarantees can be strengthened by using the condition $r + w > n$.
-In that case, at least one node involved in the read will have received the latest write, thus ensuring more consistent reads.
-However, it is the client's responsibility to determine which of the returned values is the most recent, since the system does not provide timestamps or version identifiers.
+In that case, at least one node involved in the read will have received the
+latest write, thus ensuring more consistent reads.
+However, it is the client's responsibility to determine which of the returned
+values is the most recent, since the system does not provide timestamps or
+version identifiers.
 
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
 
-To ensure database availability, each node can be tagged with a string identifying its \emph{Availability Zone} (\texttt{AZ}).
-Two nodes belonging to the same \texttt{AZ} cannot be chosen to replicate the same key.
-To ensure that keys are replicated in a way that keeps them available even in case of an entire \texttt{AZ} failure, we modify the key distribution algorithm:
-\begin{itemize}
-    \item during table creation, the router must not allocate more than \texttt{b} bandwidth from nodes in the same \texttt{AZ};
-    \item nodes must be assigned to the ring in order of \texttt{AZ}, so that an interval of length \texttt{n} in the ring contains nodes belonging to distinct \texttt{AZ}s.
-\end{itemize}
+To increase data availability, each node can be tagged with an
+\emph{Availability Zone} identifier, which is a string representing a physical
+or logical grouping of nodes.
+When creating a table, the system ensures that each key-value pair is stored on
+nodes with different Availability Zones.
+This way, even if an entire Availability Zone fails, the data remains
+accessible from other zones.
 
 \subsection{Throughput throttling}
 \label{subsec:throughput-throttling}
 
-In a multi-tenant system such as Kitsurai, it is necessary to prevent a single client from monopolizing resources and compromising the performance of others.
-For this reason, Kitsurai implements a throughput throttling mechanism that guarantees each client the bandwidth requested at table creation, even in the presence of high and concurrent loads.
+In a multi-tenant system such as Kitsurai, it is necessary to prevent a single
+client from monopolizing resources and compromising the performance of others.
+For this reason, Kitsurai implements a throughput throttling mechanism that
+guarantees each client the bandwidth requested at table creation, even in the
+presence of high and concurrent loads.
 
-Each node in the cluster maintains, for each table, a variable \texttt{sched\_at} that indicates when the node will be available again to execute new operations on that table.
-When a client sends a read or write request, the node waits until \texttt{sched\_at} before executing the operation, then increments \texttt{sched\_at} by an interval equal to $\displaystyle \frac{1}{b}$, where $b$ represents the requested bandwidth for the table.
-If \texttt{sched\_at} is already in the past, the system could execute uncontrolled operations until \texttt{sched\_at} catches up with the current time; to avoid this, if \texttt{sched\_at} is already in the past, it is updated to 100 ms before the current time, thus allowing a short controlled burst of operations.
+\subsection{Bandwidth allocation model}
+\label{subsec:bandwidth-model}
 
-\subsection{Bandwidth allocation}
-\label{subsec:bandwidth-allocation}
+For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that
+the maximum amount of operations per second a machine can execute is fixed and
+independent of other factors such as the size of the data being read or
+written.
 
-For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that the maximum number of operations per second a machine can execute is fixed and independent of other factors such as the size of ongoing reads and writes.
-
-For this reason, each node only needs to know its maximum bandwidth---measured beforehand using standard profiling and sizing operations---to determine whether it is able to handle the load requested by a table.
-For this purpose, SSD disks must be used, as they provide constant and predictable performance, unlike HDDs, which are subject to unpredictable slowdowns due to seek operations and access latency.
+For this reason, each node only needs to know its maximum bandwidth, measured
+beforehand using standard profiling operations, to determine whether it is able
+to handle the load requested by a table.
+For this purpose, SSD disks must be used, as they provide constant and
+predictable performance, unlike HDDs, which are subject to unpredictable
+slowdowns due to seek operations and access latency.
