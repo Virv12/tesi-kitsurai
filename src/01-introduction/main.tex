@@ -1,9 +1,5 @@
-\usepackage{hyperref}
-
-
 \section{Introduction}
 \label{sec:introduction}
-
 In recent years, replicated storage services in the field of Cloud Computing have gained significant importance.
 In a context where applications must serve millions of users simultaneously, often geographically distributed,
 it becomes crucial to design systems capable of providing horizontal scalability, high availability, and fault tolerance.
@@ -19,22 +15,19 @@ However, providing latency and performance guarantees in distributed and multi-t
 
 Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
 without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
-% TODO: Qualcosa hanno, semplicemente throttling senza però garantire realmente le performance, posso sempre fare over-allocation.
-%       E sono tutti master-slave per gestire questa cosa.
 The multi-tenant model, in which several customers share the same physical or virtual resources,
 introduces additional challenges in workload management and in guaranteeing minimum performance levels.
 In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
 making precise throughput control for each client essential.
-% Questo pezzo qui sopra insomma.
+% TODO: Questo pezzo qui sopra insomma.
 
 \paragraph{Paper Contributions}
-
 % TODO: Qui c'era da chiarire se si può dire il nome del progetto per il discorso anonimita.
 The \textit{Kitsurai} project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
-It achieves this with a bandwidth allocation and key distribution algorithm, with configurable replication, read concern and write concern per table.
-The resulting system is designed to work without the need for shared state, making % TODO
+It achieves this with a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
+The resulting system is designed to work without the need for coordination, making resilient to faults and network partitions.
 
 The project was developed in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
 Rust is known for delivering performance comparable to C++ while avoiding common classes of errors such as race conditions or memory leaks,
@@ -42,10 +35,16 @@ making it particularly suitable for programming complex distributed systems.
 In addition, it has an ever-growing set of high quality libraries that simplified development considerably.
 
 \paragraph{Paper Organization}
-% TODO
+The paper is organized as follows: Section~\ref{sec:related}
+reviews related work and situates our approach within previous research.
+Section~\ref{sec:architecture} presents the system’s assumptions, API, and overall architecture,
+followed by Section~\ref{sec:implementation}, which details our approach and main algorithm.
+Section~\ref{sec:results} discusses the experimental results,
+highlighting how the system maintains the expected throughput when scaling across multiple machines.
+Finally, Section~\ref{sec:conclusions} summarizes the current status of the project
+and outlines possible directions for future work.
 
 
 \section{Related Work}
 \label{sec:related}
 \input{01-introduction/related-work}
-
