@@ -1,5 +1,6 @@
 \section{Introduction}
 \label{sec:introduction}
+% TODO: Si può migliorare ma per ora mi accontento.
 In recent years, replicated storage services in the field of Cloud Computing have gained significant importance.
 In a context where applications must serve millions of users simultaneously, often geographically distributed,
 it becomes crucial to design systems capable of providing horizontal scalability, high availability, and fault tolerance.
@@ -19,9 +20,9 @@ The multi-tenant model, in which several customers share the same physical or vi
 introduces additional challenges in workload management and in guaranteeing minimum performance levels.
 In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
 making precise throughput control for each client essential.
-% TODO: Questo pezzo qui sopra insomma.
 
 \paragraph{Paper Contributions}
+% TODO: Si può migliorare ma per ora mi accontento.
 % TODO: Qui c'era da chiarire se si può dire il nome del progetto per il discorso anonimita.
 The \textit{Kitsurai} project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
