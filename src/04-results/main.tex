@@ -16,7 +16,6 @@ on a table with throttling disabled (i.e., set to sufficiently high limit) and v
 
 Table~\ref{tab:results-stress} presents the results, which allows us to rank the machine as follows: $2H \approx M \approx A$.
 Get operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the gigabit connection.
-When present, the tuple at the end of the test case reports the ($N$, $R$, $W$) parameters used in that test.
 
 % TODO: Bandwidth o altra parola?
 The scalability and replication of the system were then evaluated.
@@ -47,8 +46,7 @@ In our setup, this corresponds to \SI{20.6}{\kilo\hertz}.
 
 
 Testing shows that the system scales as expected, reaching \SI{13.2}{\kilo\hertz} (92\%) and \SI{17.0}{\kilo\hertz} (83\%) of the expected values.
-The losses can in part be accounted for by considering the CPU overhead of running the stress itself
-and the probabilistic nature of key distribution.
+The losses can in part be accounted for by the CPU overhead of running the test itself and the probabilistic nature of key distribution.
 
 %N=1000, p_i = 1/3
 %var = 1000 * 1/3 * 2/3 = 2/9 * 1000
@@ -82,8 +80,8 @@ In our setup, $H$'s is faster than $M$ and $A$ combined, yielding an expected ov
 
 
 Testing confirms that the system scales as predicted, achieving \SI{7.2}{\kilo\hertz} (100\%) and \SI{9.4}{\kilo\hertz} (96\%) of the expected values.
-The remaining 5\% discrepancy cannot be explained solely by CPU overhead from the stress test,
-but it is due to the probabilistic nature of key distribution.
+The losses can again be explained by the CPU overhead of running the test itself and the probabilistic nature of key distribution.
+
 
 %N=1000, p_1,2,3 = 2/3
 %var_1,2,3 = 1000 * 2/3 * 1/3 = 2/9 * 1000
@@ -113,22 +111,24 @@ but it is due to the probabilistic nature of key distribution.
         Machine $M$ self stress   & --                    & 64.0                     & 5.0                      \\
         Machine $H$ self stress   & --                    & 83.3                     & 10.8                     \\
         Machine $A$ self stress   & --                    & 56.6                     & 4.8                      \\
-        Uniform on (1, 1, 1)      & 102.0                 & 44.1                     & 13.2                     \\
-        Proportional on (1, 1, 1) & 97.0                  & 56.5                     & 17.0                     \\
-        Uniform on (2, 2, 2)      & 67.3                  & 21.8                     & 7.2                      \\
-        Proportional on (2, 2, 2) & 62.4                  & 28.0                     & 9.4                      \\
+        Uniform with $N = 1$      & 102.0                 & 44.1                     & 13.2                     \\
+        Proportional with $N = 1$ & 97.0                  & 56.5                     & 17.0                     \\
+        Uniform with $N = 2$      & 67.3                  & 21.8                     & 7.2                      \\
+        Proportional with $N = 2$ & 62.4                  & 28.0                     & 9.4                      \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \paragraph{Real-Time}
 The last test focused on evaluating the real-time properties of the system, simulating a concrete use case.
-With a proportional bandwidth configuration, a table $T_T$ was created with a bandwidth of \SI{200}{\hertz} and $N=3$, $R=3$, $W=3$.
-To represent external interference, another table $T_O$ was created with sufficiently high bandwidth, $N=2$, $R=2$, and $W=2$.
+With a proportional bandwidth configuration matching the measured rates in the self stress,
+a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a bandwidth of \SI{200}{\hertz}.
+To represent external interference, another table $T_O$ was created with $N=2$, $R=2$, $W=2$
+and bandwidth such that it would saturate the machines configured bandwidth.
 To stress the system, two extra instances of \texttt{ktb} were executed on machines $A$ and $M$, both targeting $T_O$.
 The reported data was collected from machine $H$'s \texttt{ktb} instance targeting $T_T$.
 
-The system successfully isolated the target table from the outside noise, maintaining the allocated throughput of \SI{200}{\hertz}.
+The system successfully isolated the target table $T_T$ from the outside noise, maintaining the allocated throughput of \SI{200}{\hertz}.
 Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than \SI{200}{\hertz},
 both with and without external stress.
 Overall, a slight increase in latency was observed, which is expected, as no explicit latency control mechanism is implemented.
@@ -150,4 +150,8 @@ Overall, a slight increase in latency was observed, which is expected, as no exp
         \bottomrule
     \end{tabular}
 \end{table}
+
+% TODO: Una sezione che spiega due cose in più ci potrebbe stare, viene anche decentemente lunga.
+%\subsection{Key Distribution Error}
+%\label{subsec:key-distribution-error}
 
