@@ -45,7 +45,7 @@ is that of CPU schedulers for real-time processes.
 As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
 the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
 Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto standard\footnote{
-    \url{https://crates.io/crates/tokio} reports over 416 million all-time downloads,
+    \url{https://crates.io} reports over 416 million all-time downloads for \texttt{tokio},
     compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
 } for asynchronous in Rust -- uses a multi-threaded work-stealing scheduler
 which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
