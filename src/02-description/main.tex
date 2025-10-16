@@ -31,84 +31,83 @@ Section~\ref{subsec:availability-zones}).
 
 Each table has four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{bandwidth} or \texttt{b}: the number of requests, as
-        perceived by the client, that the system must guarantee for the table,
-        expressed in requests per second.
-    \item \texttt{n}: the replication factor for each key-value pair.
-    \item \texttt{read\_concern} or \texttt{r}: the minimum number of nodes
-        that must successfully respond to a read request.
-    \item \texttt{write\_concern} or \texttt{w}: the minimum number of nodes
-        that must successfully respond to a write request.
+    \item \texttt{bandwidth} or $B$: the number of requests, as
+    perceived by the client, that the system must guarantee for the table,
+    expressed in requests per second.
+    \item $N$: the replication factor for each key-value pair.
+    \item \texttt{read\_concern} or $R$: the minimum number of nodes
+    that must successfully respond to a read request.
+    \item \texttt{write\_concern} or $W$: the minimum number of nodes
+    that must successfully respond to a write request.
 \end{itemize}
 
-Parameters must satisfy the constraints $1 \leq r, w \leq n$ and $b > 0$.
+Parameters must satisfy the constraints $1 \leq R, W \leq N$ and $B > 0$.
 
 Additionally, the system computes four parameters automatically:
 \begin{itemize}
     \item \texttt{id}: a UUID identifying the table, generated at creation.
     \item \texttt{responsible\_nodes}: the list of nodes on which the table's
-        key-value pairs are distributed, chosen to guarantee replication and
-        data availability.
+    key-value pairs are distributed, chosen to guarantee replication and
+    data availability.
     \item $s_i$: the bandwidth allocated by node $i$ for the table.
     \item $S$: the total bandwidth allocated for the table, computed as $S =
-        \sum s_i$ or equivalently $S = b \cdot n$.
+    \sum s_i$ or equivalently $S = B \cdot N$.
 \end{itemize}
 
 \subsection{Client API}
 \label{subsec:interface}
 
-The system exposes the public API through a REST interface over HTTP.
+The system exposes the public API through a REST interface over HTTP\@.
 Since every node maintains a copy of the metadata for all tables, the client
 can send requests to any node in the cluster, which acts as a \emph{router} to
 forward the request to the appropriate nodes.
 
-\subsubsection{table-create}
+\subsubsection{\texttt{table-create}}
 \label{subsubsec:table-create}
 
-The client sends four parameters: \texttt{bandwidth}, \texttt{n}, \texttt{r},
-and \texttt{w}.
+The client sends four parameters: $B$, $N$, $R$, and $W$.
 The system allocates enough bandwidth on the nodes to satisfy the requested
 parameters, creates the table, and returns the generated \texttt{id} of the new
 table.
 If it's not possible to satisfy the requested parameters, the operation fails
 and returns an error.
 
-\subsubsection{table-delete}
+\subsubsection{\texttt{table-delete}}
 \label{subsubsec:table-delete}
 
 The client sends the \texttt{id} of the table to be deleted.
 The system marks the table as deleted and frees the allocated resources.
 
-\subsubsection{item-get}
+\subsubsection{\texttt{item-get}}
 \label{subsubsec:item-get}
 
 The client sends the \texttt{id} of the table and the \texttt{key} to be
 retrieved.
 The system forwards the request to the responsible nodes and waits for at least
-\texttt{r} successful responses.
+$R$ successful responses.
 If the operation succeeds, it returns a list of the values received from the
 nodes; otherwise, it returns an error.
 
-\subsubsection{item-set}
+\subsubsection{\texttt{item-set}}
 \label{subsubsec:item-set}
 
 The client sends the \texttt{id} of the table, the \texttt{key}, and the
 \texttt{value} to be set.
 The system forwards the request to the responsible nodes and waits for at least
-\texttt{w} successful responses.
+$W$ successful responses.
 If the operation succeeds, it returns a success message; otherwise, it returns
 an error.
 
-\subsection{Consistency model}
+\subsection{Consistency Model}
 \label{subsec:consistency-model}
 
 The system does not guarantee any form of consistency on item reads and writes.
-A value written to a key is guaranteed to be stored on at least \texttt{w}
+A value written to a key is guaranteed to be stored on at least $W$
 nodes, but it will never be propagated to other nodes.
-Thus if a node is unavailable during a write, it will continue to return the
+Thus, if a node is unavailable during a write, it will continue to return the
 previous value to subsequent reads until it receives a new write.
 
-Consistency guarantees can be strengthened by using the condition $r + w > n$.
+Consistency guarantees can be strengthened by using the condition $R + W > N$.
 In that case, at least one node involved in the read will have received the
 latest write, thus ensuring that at least one of the returned values is the
 most recent.
@@ -127,7 +126,7 @@ nodes with different Availability Zones.
 This way, even if an entire Availability Zone fails, the data remains
 accessible from other zones.
 
-\subsection{Throughput throttling}
+\subsection{Throughput Throttling}
 \label{subsec:throughput-throttling}
 
 In a multi-tenant system such as Kitsurai, it is necessary to prevent a single
@@ -136,7 +135,7 @@ For this reason, Kitsurai implements a throughput throttling mechanism that
 guarantees each table the bandwidth requested at table creation, even in the
 presence of high and concurrent loads.
 
-\subsection{Bandwidth allocation model}
+\subsection{Bandwidth Allocation Model}
 \label{subsec:bandwidth-model}
 
 For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that

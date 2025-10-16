@@ -73,13 +73,13 @@ To create a table, the following steps are performed:
 \begin{enumerate}
     \item The client connects to a node of its choice, which acts as a
         \emph{router}.
-    \item The client sends the table's parameters \texttt{b}, \texttt{n},
-        \texttt{r}, and \texttt{w} to the router.
+    \item The client sends the table's parameters $B$, $N$,
+        $R$, and $W$ to the router.
     \item The router generates an \texttt{id} for the table and computes the
-        effective bandwidth $S = b \cdot n$ to account for replication.
+        effective bandwidth $S = B \cdot N$ to account for replication.
     \item\label{step:prepare} The router iterates over the nodes in the
         cluster, skipping unavailable ones, requesting a bandwidth allocation
-        for the new table, allocating up to $b$ on each availability zone.
+        for the new table, allocating up to $B$ on each availability zone.
         Each node can allocate as much bandwidth as it has available, up to the
         requested amount, after performing the allocation, the node marks the
         table as locally \emph{prepared}.

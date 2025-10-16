@@ -21,24 +21,24 @@
 To read or write a key, the following steps are performed:
 \begin{enumerate}
     \item The client connects to an arbitrary node of its choice, which acts as
-        a \emph{router}.
+    a \emph{router}.
     \item The client sends the key and, in case of a write, the value to be
-        stored.
-    \item The router computes the \texttt{n} nodes responsible for that key
-        (see Section~\ref{subsec:replication-ring}).
+    stored.
+    \item The router computes the $N$ nodes responsible for that key
+    (see Section~\ref{subsec:replication-ring}).
     \item The router sends the read or write request to the responsible nodes.
     \item The nodes respond with the requested value or confirm the write.
     \item The router aggregates the responses and returns as soon as it
-        receives \texttt{r} (for reads) or \texttt{w} (for writes) successful
-        replies.
+    receives $R$ (for reads) or $W$ (for writes) successful
+    replies.
 \end{enumerate}
 
-If fewer than \texttt{r} (or \texttt{w}) nodes respond successfully, the
+If fewer than $R$ (or $W$) nodes respond successfully, the
 operation fails and an error is returned to the client.
 
-\input{03-implementation/ring.tex}
+\input{03-implementation/ring}
 
-\input{03-implementation/table.tex}
+\input{03-implementation/table}
 
 \subsection{RPC}
 \label{subsec:rpc}
@@ -58,7 +58,7 @@ A request-response cycle consists of the following steps:
     \item The client sends the request in the body of an HTTP/2 request.
     \item The server reads, deserializes and processes the request.
     \item The server serializes the response into a binary format.
-    \item The server sends the reponse in the body of the HTTP/2 response.
+    \item The server sends the response in the body of the HTTP/2 response.
     \item The client reads and deserializes the response.
 \end{enumerate}
 
