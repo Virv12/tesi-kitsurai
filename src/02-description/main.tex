@@ -56,7 +56,7 @@ Additionally, the system computes four parameters automatically:
 \end{itemize}
 
 \subsection{Consistency and Client-Visible Semantics}
-\label{sec:consistency}
+\label{subsec:consistency}
 
 Our store is a best-effort, partition-tolerant key–value service with explicit
 client-tunable quorums. We make two deliberate design choices:
@@ -124,7 +124,7 @@ retrieved.
 The system forwards the request to the responsible nodes and waits for at least
 $R$ successful responses.
 If the operation succeeds, it returns a list of the values received from the
-nodes; otherwise, it returns an error.
+nodes; otherwise, it returns an error with the successfully collected values.
 
 \subsubsection{\texttt{item-set}}
 \label{subsubsec:item-set}

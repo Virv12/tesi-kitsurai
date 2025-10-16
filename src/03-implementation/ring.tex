@@ -130,7 +130,7 @@ Therefore, this construction satisfies the properties described above for the
     label={lst:explicit-ring}
 ]
 def build_ring(table):
-  S = table.bandwidth * table.n
+  S = table.B * table.N
   ring = [None] * S
   curr_pos = 0
 
@@ -141,7 +141,7 @@ def build_ring(table):
         curr_pos = (curr_pos + 1) % S
       assert ring[curr_pos] is None
       ring[curr_pos] = i
-      curr_pos = (curr_pos + table.n) % S
+      curr_pos = (curr_pos + table.N) % S
 
   return ring
 \end{lstlisting}
@@ -223,7 +223,7 @@ It follows that $o_p = \left\lfloor \frac{p}{N} \right\rfloor + (p \bmod N)
 Now we need to find the $o_p$-th assigned node, i.e., the node $i$ such that
 $\sum_{j=0}^{i-1} s_j \leq o_p < \sum_{j=0}^{i} s_j$.
 
-In pseudocode, the algorithm to find the node assigned to a position $j$ in the
+In pseudocode, the algorithm to find the node assigned to a position $p$ in the
 ring can be represented as in Listing~\ref{lst:implicit-ring}.
 
 \begin{lstlisting}[
@@ -232,15 +232,15 @@ ring can be represented as in Listing~\ref{lst:implicit-ring}.
     caption={Implicit ring construction},
     label={lst:implicit-ring}
 ]
-def get_node_at_position(table, j):
-    n = table.n
-    b = table.bandwidth
-    o_p = floor(p / n) + (p % n) * b
+def get_node_at_position(table, p):
+    N = table.N
+    B = table.B
+    o_p = floor(p / N) + (p % N) * B
 
-    sum = 0
+    acc = 0
     for node in range(table.m):
-        sum += table.s[node]
-        if sum > o_p:
+        acc += table.s[node]
+        if acc > o_p:
             return node
 \end{lstlisting}
 
