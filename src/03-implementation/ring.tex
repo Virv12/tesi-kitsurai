@@ -86,11 +86,11 @@ The key is then assigned to the $N$ nodes immediately following the
 computed position, i.e., to the nodes at positions $p, p + 1, \dots, p + n - 1$
 (wrapping around the ring if necessary).
 
-Since each interval of length $l$ contains distinct nodes, each key is assigned
+Since each interval of length $N$ contains distinct nodes, each key is assigned
 to $N$ nodes with different availability zones, satisfying the first
 requirement.
 Furthermore, the probability that a key is assigned to position $p$ in the ring
-is $\frac{l}{S} = \frac{1}{B}$, so the expected number of keys assigned to the
+is $\frac{N}{S} = \frac{1}{B}$, so the expected number of keys assigned to the
 position is $|K| \cdot \frac{1}{B}$.
 Since each node $i$ occupies exactly $s_i$ positions in the ring and each key
 is assigned at most once to the same node, the expected number of keys assigned
