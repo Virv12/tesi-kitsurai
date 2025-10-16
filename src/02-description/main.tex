@@ -32,13 +32,13 @@ Section~\ref{subsec:availability-zones}).
 Each table has four parameters specified by the user at creation time:
 \begin{itemize}
     \item \texttt{bandwidth} or $B$: the number of requests, as
-    perceived by the client, that the system must guarantee for the table,
-    expressed in requests per second.
+        perceived by the client, that the system must guarantee for the table,
+        expressed in requests per second.
     \item $N$: the replication factor for each key-value pair.
     \item \texttt{read\_concern} or $R$: the minimum number of nodes
-    that must successfully respond to a read request.
+        that must successfully respond to a read request.
     \item \texttt{write\_concern} or $W$: the minimum number of nodes
-    that must successfully respond to a write request.
+        that must successfully respond to a write request.
 \end{itemize}
 
 Parameters must satisfy the constraints $1 \leq R, W \leq N$ and $B > 0$.
@@ -47,12 +47,50 @@ Additionally, the system computes four parameters automatically:
 \begin{itemize}
     \item \texttt{id}: a UUID identifying the table, generated at creation.
     \item \texttt{responsible\_nodes}: the list of nodes on which the table's
-    key-value pairs are distributed, chosen to guarantee replication and
-    data availability.
+        key-value pairs are distributed, chosen to guarantee replication and
+        data availability.
+    \item $m$: the number of \texttt{responsible\_nodes}.
     \item $s_i$: the bandwidth allocated by node $i$ for the table.
     \item $S$: the total bandwidth allocated for the table, computed as $S =
-    \sum s_i$ or equivalently $S = B \cdot N$.
+        \sum s_i$ or equivalently $S = B \cdot N$.
 \end{itemize}
+
+\subsection{Consistency and Client-Visible Semantics}
+\label{sec:consistency}
+
+Our store is a best-effort, partition-tolerant key–value service with explicit
+client-tunable quorums. We make two deliberate design choices:
+
+\begin{itemize}
+    \item \textbf{No replica reconciliation.}
+        The system performs \emph{no} server-side conflict resolution,
+        \emph{no} read repair, and \emph{no} background anti-entropy for item
+        payloads.
+        Replicas that miss a write may indefinitely retain a divergent value
+        until a later client write updates them.
+    \item \textbf{Multi-value reads.}
+        Reads may return multiple distinct versions of the same key.
+        The store does not attempt to infer a single ``latest'' value, this is
+        left to the application.
+\end{itemize}
+
+\paragraph{Quorum parameters.}
+We use lowercase $N, R, W$ for the number of replicas, read quorum, and write
+quorum.
+A write to key $k$ is considered \emph{committed} once any $W$ replicas
+acknowledge persisting the value; the system does not subsequently propagate
+that value to the remaining $N - W$ replicas.
+A read for $k$ completes once responses from any $R$ replicas are received
+(within the request deadline).
+
+\paragraph{Quorum intersection.}
+If $R + W > N$, then any set of $R$ replicas intersects any set of $W$
+replicas.
+Consequently, every read that gathers $R$ replies contains \emph{at least one}
+payload written by any previously completed write.
+However, in the presence of concurrent or failed writes, multiple distinct
+payloads can appear in the read result, and the store offers no mechanism to
+identify which is newest.
 
 \subsection{Client API}
 \label{subsec:interface}
@@ -97,23 +135,6 @@ The system forwards the request to the responsible nodes and waits for at least
 $W$ successful responses.
 If the operation succeeds, it returns a success message; otherwise, it returns
 an error.
-
-\subsection{Consistency Model}
-\label{subsec:consistency-model}
-
-The system does not guarantee any form of consistency on item reads and writes.
-A value written to a key is guaranteed to be stored on at least $W$
-nodes, but it will never be propagated to other nodes.
-Thus, if a node is unavailable during a write, it will continue to return the
-previous value to subsequent reads until it receives a new write.
-
-Consistency guarantees can be strengthened by using the condition $R + W > N$.
-In that case, at least one node involved in the read will have received the
-latest write, thus ensuring that at least one of the returned values is the
-most recent.
-However, it is the client's responsibility to determine which of the returned
-values is the most recent, since the system does not provide timestamps or
-version identifiers.
 
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
