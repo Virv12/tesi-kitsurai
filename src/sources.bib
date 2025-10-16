@@ -72,18 +72,17 @@
 }
 
 @inproceedings{MerkleTree,
-    author = "Merkle, Ralph C.",
-    editor = "Pomerance, Carl",
-    title = "A Digital Signature Based on a Conventional Encryption Function",
-    booktitle = "Advances in Cryptology --- CRYPTO '87",
-    year = "1988",
-    publisher = "Springer Berlin Heidelberg",
-    address = "Berlin, Heidelberg",
-    pages = "369--378",
-    abstract = "A new digital signature based only on a conventional encryption function (such as DES) is described which is as secure as the underlying encryption function -- the security does not depend on the difficulty of factoring and the high computational costs of modular arithmetic are avoided. The signature system can sign an unlimited number of messages, and the signature size increases logarithmically as a function of the number of messages signed. Signature size in a `typical' system might range from a few hundred bytes to a few kilobytes, and generation of a signature might require a few hundred to a few thousand computations of the underlying conventional encryption function.",
-    isbn = "978-3-540-48184-3"
+    author = {Merkle, Ralph C.},
+    editor = {Pomerance, Carl},
+    title = {A Digital Signature Based on a Conventional Encryption Function},
+    booktitle = {Advances in Cryptology --- CRYPTO '87},
+    year = {1988},
+    publisher = {Springer Berlin Heidelberg},
+    address = {Berlin, Heidelberg},
+    pages = {369--378},
+    abstract = {A new digital signature based only on a conventional encryption function (such as DES) is described which is as secure as the underlying encryption function -- the security does not depend on the difficulty of factoring and the high computational costs of modular arithmetic are avoided. The signature system can sign an unlimited number of messages, and the signature size increases logarithmically as a function of the number of messages signed. Signature size in a `typical' system might range from a few hundred bytes to a few kilobytes, and generation of a signature might require a few hundred to a few thousand computations of the underlying conventional encryption function.},
+    isbn = {978-3-540-48184-3},
 }
-
 
 @misc{QUIC,
     series = {Request for Comments},
@@ -163,16 +162,22 @@
     abstract = {This specification describes how to use bearer tokens in HTTP requests to access OAuth 2.0 protected resources. Any party in possession of a bearer token (a "bearer") can use it to get access to the associated resources (without demonstrating possession of a cryptographic key). To prevent misuse, bearer tokens need to be protected from disclosure in storage and in transport. {[}STANDARDS-TRACK{]}},
 }
 
-@inbook{RTDBS,
-    author = {Kao, Ben and Garc\'{\i}a-Molina, H\'{e}ctor},
-    title = {An overview of real-time database systems},
-    year = {1995},
-    isbn = {0130833487},
-    publisher = {Prentice-Hall, Inc.},
-    address = {USA},
-    booktitle = {Advances in Real-Time Systems},
-    pages = {463–486},
-    numpages = {24}
+@inproceedings{FailureDetection,
+    author = {Gupta, Indranil and Chandra, Tushar D. and Goldszmidt, Germ\'{a}n S.},
+    title = {On scalable and efficient distributed failure detectors},
+    year = {2001},
+    isbn = {1581133839},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/383962.384010},
+    doi = {10.1145/383962.384010},
+    abstract = {Process groups in distributed applications and services rely on failure detectors to detect process failures completely, and as quickly, accurately, and scalably as possible, even in the face of unreliable message deliveries. In this paper, we look at quantifying the optimal scalability, in terms of network load, (in messages per second, with messages having a size limit) of distributed, complete failure detectors as a function of application-specified requirements. These requirements are 1) quick failure detection by some non-faulty process, and 2) accuracy of failure detection. We assume a crash-recovery (non-Byzantine) failure model, and a network model that is probabilistically unreliable (w.r.t. message deliveries and process failures). First, we characterize, under certain independence assumptions, the optimum worst-case network load imposed by any failure detector that achieves an application's requirements. We then discuss why traditional heart beating schemes are inherently unscalable according to the optimal load. We also present a randomized, distributed, failure detector algorithm that imposes an equal expected load per group member. This protocol satisfies the application defined constraints of completeness and accuracy, and speed of detection on an average. It imposes a network load that differs frown the optimal by a sub-optimality factor that is much lower than that for traditional distributed heartbeating schemes. Moreover, this sub-optimality factor does not vary with group size (for large groups).},
+    booktitle = {Proceedings of the Twentieth Annual ACM Symposium on Principles of Distributed Computing},
+    pages = {170–179},
+    numpages = {10},
+    keywords = {scalability, failure detectors, efficiency, distributed systems, accuracy},
+    location = {Newport, Rhode Island, USA},
+    series = {PODC '01}
 }
 
 @inproceedings{SWIM,
@@ -261,4 +266,83 @@
     eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/spe.2335},
     abstract = {Summary During the last decade, there has been a considerable interest in using Linux in real-time systems, especially for industrial control. The simple and elegant design of Linux guarantees reliability and very good performance, while its open-source license allows to modify and change the source code according to the user needs. However, Linux has been designed to be a general-purpose operating system. Therefore, it presents some issues like unpredictable latencies and limited support for real-time scheduling. In this paper, we present our experience in the design and implementation of the real-time scheduler that has been recently included in the Linux kernel. The scheduler is based on the Resource Reservation paradigm, which allows to enforce temporal isolation between the running tasks. We describe the genesis of the project, the challenges we have encountered, the implementation details and the API offered to the programmers. Then, we show the experimental results measured on a real hardware. Copyright © 2015 John Wiley \& Sons, Ltd.},
     year = {2016}
+}
+
+@inproceedings{ConsistentHashing,
+    author = {Karger, David and Lehman, Eric and Leighton, Tom and Panigrahy, Rina and Levine, Matthew and Lewin, Daniel},
+    title = {Consistent hashing and random trees: distributed caching protocols for relieving hot spots on the World Wide Web},
+    year = {1997},
+    isbn = {0897918886},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/258533.258660},
+    doi = {10.1145/258533.258660},
+    booktitle = {Proceedings of the Twenty-Ninth Annual ACM Symposium on Theory of Computing},
+    pages = {654–663},
+    numpages = {10},
+    location = {El Paso, Texas, USA},
+    series = {STOC '97}
+}
+
+maybe add to related work from here on out
+
+@inproceedings{PerfComp,
+    author = {Yuvraj Patel and Mohit Verma and Andrea C. Arpaci-Dusseau and Remzi H. Arpaci-Dusseau},
+    title = {Revisiting Concurrency in {High-Performance} {NoSQL} Databases},
+    booktitle = {10th USENIX Workshop on Hot Topics in Storage and File Systems (HotStorage 18)},
+    year = {2018},
+    address = {Boston, MA},
+    url = {https://www.usenix.org/conference/hotstorage18/presentation/patel},
+    publisher = {USENIX Association},
+    month = jul
+}
+
+@inproceedings{MicroFuge,
+    author = {Singh, Akshay K. and Cui, Xu and Cassell, Benjamin and Wong, Bernard and Daudjee, Khuzaima},
+    booktitle = {2014 IEEE 34th International Conference on Distributed Computing Systems},
+    title = {MicroFuge: A Middleware Approach to Providing Performance Isolation in Cloud Storage Systems},
+    year = {2014},
+    volume = {},
+    number = {},
+    pages = {503-513},
+    keywords = {Servers;Cloud computing;Load modeling;Admission control;Time factors;Resource management;caching;middleware;performance isolation;storage;scheduling},
+    doi = {10.1109/ICDCS.2014.58}
+}
+
+@inproceedings{mClock,
+    author = {Gulati, Ajay and Merchant, Arif and Varman, Peter J.},
+    title = {mClock: handling throughput variability for hypervisor IO scheduling},
+    year = {2010},
+    publisher = {USENIX Association},
+    address = {USA},
+    abstract = {Virtualized servers run a diverse set of virtual machines (VMs), ranging from interactive desktops to test and development environments and even batch workloads. Hypervisors are responsible for multiplexing the underlying hardware resources among VMs while providing them the desired degree of isolation using resource management controls. Existing methods provide many knobs for allocating CPU and memory to VMs, but support for control of IO resource allocation has been quite limited. IO resource management in a hypervisor introduces significant new challenges and needs more extensive controls than in commodity operating systems.This paper introduces a novel algorithm for IO resource allocation in a hypervisor. Our algorithm, mClock, supports proportional-share fairness subject to minimum reservations and maximum limits on the IO allocations for VMs. We present the design of mClock and a prototype implementation inside the VMware ESX server hypervisor. Our results indicate that these rich QoS controls are quite effective in isolating VM performance and providing better application latency. We also show an adaptation of mClock (called dmClock) for a distributed storage environment, where storage is jointly provided by multiple nodes.},
+    booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
+    pages = {437–450},
+    numpages = {14},
+    location = {Vancouver, BC, Canada},
+    series = {OSDI'10}
+}
+
+@inproceedings{AnnaBellaDB,
+    author = {Szalay, Mark and Matray, Peter and Toka, Laszlo},
+    booktitle = {2020 16th International Conference on Network and Service Management (CNSM)},
+    title = {AnnaBellaDB: Key-Value Store Made Cloud Native},
+    year = {2020},
+    volume = {},
+    number = {},
+    pages = {1-5},
+    keywords = {Servers;Noise measurement;Monitoring;Routing;Cloud computing;Delays;Distributed databases},
+    doi = {10.23919/CNSM50824.2020.9269045}
+}
+
+@inproceedings{AQUAS,
+    author = {Xu, Chen and Xia, Fan and Sharaf, Mohamed A. and Zhou, Minqi and Zhou, Aoying},
+    booktitle = {2014 IEEE 30th International Conference on Data Engineering},
+    title = {AQUAS: A quality-aware scheduler for NoSQL data stores},
+    year = {2014},
+    volume = {},
+    number = {},
+    pages = {1210-1213},
+    keywords = {Quality of service;Scheduling;Prototypes;Delays;Estimation;Generators;Educational institutions},
+    doi = {10.1109/ICDE.2014.6816743}
 }

@@ -1,12 +1,6 @@
-Classical works on real-time databases~\cite{RTDBS}
-provide the foundation for scheduling and resource management under timing constraints.
-While much of this research targets hard real-time systems,
-it motivates our approach of admission control and resource pre-allocation
-to guarantee timing constraints in distributed databases. % TODO: Verify this + cita qualcosa di più interessante?
-
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
-Amazon’s Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning,
-gossip-based membership, and Merkle-tree anti-entropy for repair.
+Amazon’s Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
+based on Karger et al.'s consistent hashing~\cite{ConsistentHashing}, gossip-based membership, and Merkle-tree anti-entropy for repair.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
 Conflicting updates are detected through versioning and resolved at read time.
 Cassandra~\cite{Cassandra} extends this design with tunable consistency levels and wide-column data modeling.
@@ -20,19 +14,22 @@ and splits them dynamically across multiple physical nodes.
 Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip and Merkle-tree anti-entropy.
 It carries over DynamoDB's per-table bandwidth reservations, but introduces a creation-time admission control,
 allowing the system to refuse table creation when cluster resources cannot satisfy the requested guarantees.
-We deliberately omit dynamic partition splitting in favor of a simpler assumption of uniform key access. % TODO: Filo bruttino detto così.
+We manage to do this by re-using the same base ideas as in Karger et al.\ consistent hashing by using
+a predictable distribution that allows for controlled access control.
+It is beyond the scope of this paper to address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
 Moreover, our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user,
 which in turn simplifies read operations for the database.
 
 Recently, X-Stor~\cite{XStor}, a cloud-native multi-model NoSQL database, introduced a generalized Request Unit (RU) abstraction
-that encompasses all resource types—CPU, memory, disk I/O, and network I/O—into a single unified metric.
+that encompasses all resource types -- CPU, memory, disk I/O, and network I/O -- into a single unified metric.
 This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
 Unlike DynamoDB’s approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
 
-SWIM~\cite{SWIM} formalizes scalable gossip-based membership protocols suitable for scalable peers,
-% TODO
-We also used a randomized approach for gossip, % TODO: See chapter?
-but, due to our static assumption on the peer set, there was no need to introduce more sophisticated mechanism.
+Gupta et al.~\cite{FailureDetection} demonstrate that traditional heartbeat-based failure detectors fail to scale,
+and propose a randomized approach to overcome this limitation.
+SWIM~\cite{SWIM} builds on this idea, introducing a scalable gossip-based membership protocol
+that combines epidemic dissemination with a suspicion mechanism to ensure robustness and bounded detection time.
+While failure detection itself lies outside the scope of our work, we nonetheless adopt a randomized peer selection strategy—similar in spirit to scalable failure detectors—for the gossip dissemination in our implementation.
 
 % TODO: CosmosDB potrebbe essere un'altro di cui parlare
 % TODO: Aerospike potrebbe essere un'altro di cui parlare
@@ -50,7 +47,8 @@ the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees
 Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto standard\footnote{
     \url{https://crates.io/crates/tokio} reports over 416 million all-time downloads,
     compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
-} for asynchronous in Rust -- uses a multi-threaded work-stealing scheduler~\cite{WorkStealingScheduler}, % TODO: Aggiungi qualcosa di succoso dal paper.
-which could potentially be enhanced by integrating a more advanced scheduling algorithm.
+} for asynchronous in Rust -- uses a multi-threaded work-stealing scheduler
+which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
+but provides no explicit latency control as some more advanced algorithm could.
 
 % TODO: MicroFuge ha molto senso sia menzionato, dato che fa _circa_ quello che ho detto.
