@@ -12,12 +12,12 @@
 %- No Consistenza: si fa con un layer aggiuntivo
 %- API client + tabelle senza nome
 
-Kitsurai stores users' data in a set of \emph{tables}, each identified by a
+\Kitsurai stores users' data in a set of \emph{tables}, each identified by a
 UUID~\cite{rfc9562}.
 Every table contains key-value pairs, where both keys and values are
 uninterpreted arrays of bytes.
 
-A Kitsurai system operates on a \emph{cluster} composed of a static set of
+A \Kitsurai system operates on a \emph{cluster} composed of a static set of
 nodes, a \emph{node} corresponds to an instance of the program running on a
 physical or virtual machine.
 Each node may be temporarily unavailable due to failures or network partitions,
@@ -138,7 +138,7 @@ an error.
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{03-description/architecture}
-    \caption{Kitsurai architecture overview. Clients can send requests to any
+    \caption{\Kitsurai architecture overview. Clients can send requests to any
         node, which routes them to the responsible nodes for the requested
         table.}
     \label{fig:architecture}
@@ -147,7 +147,7 @@ an error.
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
 
-To improve fault tolerance and ensure continuous data accessibility, Kitsurai
+To improve fault tolerance and ensure continuous data accessibility, \Kitsurai
 adopts a replication strategy based on \emph{Availability Zones} (AZs).
 Each node within the cluster is associated with an Availability Zone
 identifier, a symbolic label representing either a physical or a logical
@@ -163,22 +163,22 @@ This design minimizes the likelihood of correlated failures leading to data
 unavailability and ensures that a table remains operational even in the event
 of a complete zone outage.
 As long as the number of available zones satisfies the quorum parameters $(R,
-W)$ defined for the table, Kitsurai continues to serve read and write requests
+W)$ defined for the table, \Kitsurai continues to serve read and write requests
 using replicas from these zones.
 
 \subsection{Throughput Throttling}
 \label{subsec:throughput-throttling}
 
-In a multi-tenant system such as Kitsurai, it is necessary to prevent a single
+In a multi-tenant system such as \Kitsurai, it is necessary to prevent a single
 client from monopolizing resources and compromising the performance of others.
-For this reason, Kitsurai implements a throughput throttling mechanism that
+For this reason, \Kitsurai implements a throughput throttling mechanism that
 guarantees each table the bandwidth requested at table creation, even in the
 presence of high and concurrent loads.
 
 \subsection{Bandwidth Allocation Model}
 \label{subsec:bandwidth-model}
 
-For bandwidth allocation, Kitsurai adopts a very simple model: it assumes that
+For bandwidth allocation, \Kitsurai adopts a very simple model: it assumes that
 the maximum amount of operations per second a machine can execute is fixed and
 independent of other factors such as the size of the data being read or
 written.

@@ -1,14 +1,14 @@
 \section{Conclusions}
 \label{sec:conclusions}
 
-The \textit{Kitsurai} project was developed with the goal of creating a distributed key-value store
+The \Kitsurai project was developed with the goal of creating a distributed key-value store
 capable of offering predictable and guaranteed performance in multi-tenant environments,
 matching enterprise solutions like DynamoDB~\cite{Dynamo2022},
 a requirement often overlooked in major existing open-source solutions such as Cassandra~\cite{Cassandra} and MongoDB~\cite{RTMongo}.
 
 While the developed system still leaves ample room for improvement,
 it demonstrates how the proposed techniques can be effectively used to design
-a distributed database suitable for real-time performance guarantees.
+a distributed data store suitable for real-time performance guarantees.
 
 The experimental results confirm the validity of the approach, as the system:
 \begin{itemize}
@@ -53,3 +53,18 @@ Several additional features could be built atop the existing system as middlewar
     \item Built-in consistency options, including timestamp ordering or Dynamo-style vector clocks~\cite{Dynamo2007}, which could be provided transparently to the user;
     \item User-friendly table naming, implemented as a metadata layer stored within the system itself.
 \end{itemize}
+
+% TODO: Ultimo par. del relwork: sembra out of context, almeno cosi';
+%        secondo me potrebbe venir rigirato come un'aggiunta al Future Work (in fondo, assieme alle Conclusioni, dopo le conclusioni),
+%        cioe' il fatto che in futuro si potrebbe provare a usare priorita' real-time (come fatto in RT-MongoDB),
+%        o persino SCHED_DEADLINE qualora il sistema riuscisse a tracciare quali sono le deadline entro cui le richieste vanno completate.
+%        Pero', dato che qui si parla di accesso al disco, puo' aver senso accennare a ioprio(_get/set()), cioe' lo scheduler del disco, prima di, o assieme a, quello della CPU (e lo scheduling dei pkt in rete?)
+A parallel line of research, addressing similar concerns from a systems perspective, is that of CPU schedulers for real-time processes.
+As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
+the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
+Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto standard\footnote{
+    \href{https://crates.io}{crates.io} reports over 416 million all-time downloads for \texttt{tokio},
+    compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
+} for asynchronous programming in Rust -- uses a multi-threaded work-stealing scheduler
+which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
+but provides no explicit latency control as some more advanced algorithm could.

@@ -1,6 +1,5 @@
 \section{Introduction}
 \label{sec:introduction}
-% TODO: Si può migliorare ma per ora mi accontento.
 In recent years, replicated storage services in the field of Cloud Computing have gained significant importance.
 In a context where applications must serve millions of users simultaneously, often geographically distributed,
 it becomes crucial to design systems capable of providing horizontal scalability, high availability, and fault tolerance.
@@ -10,27 +9,41 @@ Traditional data management systems based on relational models are often unsuita
 For this reason, modern architectures increasingly rely on NoSQL solutions that, in exchange for simpler operations,
 offer lower overhead and better scalability compared to traditional SQL databases.
 
-Another aspect of growing importance is data access latency, as observed on platforms such as DynamoDB~\cite{Dynamo2007},
-which guarantee response times below 10~ms~\cite{DynamoWhitepaper}.
+A characterizing feature of Cloud computing is multi-tenancy, where several customers share the same physical or virtual resources.
+This brings a number of advantages in terms of flexibility in resources management, but it also introduces additional challenges.
+In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
+making precise throughput control for each client essential.
+These constraints create a space of hard engineering and algorithmic problems -- from replication protocols to resource managers -- that must be solved jointly.
+Building practical, tenant-aware replicated stores thus requires cross-layer designs spanning networking, storage, and control planes.
+
+
+Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
+which guarantee response times below \SI{10}{\milli\second} for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}.
 However, providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
 
 Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
 without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
-The multi-tenant model, in which several customers share the same physical or virtual resources,
-introduces additional challenges in workload management and in guaranteeing minimum performance levels.
-In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
-making precise throughput control for each client essential.
+Due to the inability to isolate traffic from multiple tenants, solutions like these often deployed as separate instances per customer,
+thereby shifting resource-management and isolation responsibilities to the underlying cluster scheduler or provisioning layer.
+
+% TODO: Aggiungere nella intro oppure in fondo a relwork la discussione di qualche lavoro di David Bermbach su data store / data base
+%  \href{https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate}{https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate}
+%  Ad es., aggiungendo la notina nei discorsi introduttivi (o relwork discussion) riguardo a varie soluzioni che sono state pensate per time-series, come i columnar DB
+
+% TODO: "Towards an Application-Centric Benchmark Suite for Spatiotemporal Database Systems", https://scholar.google.it/citations?view_op=view_citation&hl=en&user=dCCezIUAAAAJ&sortby=pubdate&citation_for_view=dCCezIUAAAAJ:uLbwQdceFCQC
+%  > Anche questo non ho capito come infilarlo in un discorso, fa tutta roba per PostGIS...
+% TODO: "Column-oriented database systems", https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate
+%  > In the context of time-series data stores, column-oriented systems provide a solution to... a different problem?
+
 
 \paragraph{Paper Contributions}
-% TODO: Si può migliorare ma per ora mi accontento.
-% TODO: Qui c'era da chiarire se si può dire il nome del progetto per il discorso anonimita.
-The \textit{Kitsurai} project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
+The \Kitsurai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
 It achieves this with a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
-The resulting system is designed to work without the need for coordination, making resilient to faults and network partitions.
+The resulting system is designed to work without the need for coordination, making it resilient to faults and network partitions.
 
-The project was developed in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
+The project is implemented in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
 Rust is known for delivering performance comparable to C++ while avoiding common classes of errors such as race conditions or memory leaks,
 making it particularly suitable for programming complex distributed systems.
 In addition, it has an ever-growing set of high quality libraries that simplified development considerably.

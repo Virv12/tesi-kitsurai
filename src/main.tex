@@ -1,3 +1,16 @@
+% TODO: Commenti di Cucinotta.
+% In generale, cercare un minimo di connessione con il concetto di "performance engineering",
+% e/o i topic che vedete in esplicito sulla CfP della conf. Ci rientriamo senza problemi,
+% e' solo a volte una questione di preferire un termine a un altro, in discorsi generici.
+%
+% Title: la conf. e' \textbf{double-blind,} rimpiazzare le info con Author 1, Author 2, Author 3,
+% ed evitare di dichiarare in esplicito chi siamo; vietato anche mettere link a repo github
+% da cui si capisce subito chi sono gli autori
+% (se si vuole enfatizzare open-source e mettere a disposizione il codice ai revisori,
+% forse c'e' modo di farlo tramite dei repo specializzati in cui non risultano gli autori,
+% ma poi si aggiungono e rivelano le info successivamente al processo di revisione)
+% \href{https://icpe2026.spec.org/double-anonymized/}{https://icpe2026.spec.org/double-anonymized/% }
+
 %% The first command in your LaTeX source must be the \documentclass
 %% command.
 %%
@@ -10,8 +23,9 @@
 %%
 %%
 \documentclass[sigconf]{acmart}
-%%
-%% \BibTeX command to typeset BibTeX logo in the docs
+%\documentclass[manuscript, screen, review]{acmart}
+%
+% \BibTeX command to typeset BibTeX logo in the docs
 \AtBeginDocument{%
     \providecommand\BibTeX{{%
         Bib\TeX}}}
@@ -34,7 +48,6 @@
 %%\acmBooktitle{Woodstock '18: ACM Symposium on Neural Gaze Detection,
 %%  June 03--05, 2018, Woodstock, NY}
 \acmISBN{978-1-4503-XXXX-X/2018/06} % TODO
-
 
 %%
 %% Submission ID.
@@ -93,6 +106,7 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{multicol}
+\usepackage{xspace}
 %\usepackage{calc}           % Generic computation (used in tables)
 \usepackage{xcolor}         % Colors
 %\usepackage{graphicx}       % Images
@@ -107,8 +121,8 @@
 %]{biblatex}
 %\usepackage{csquotes}
 %\usepackage{xurl}
-\usepackage{listings}       % Code
-%\usepackage{minted}          % Code Syntax Highlithing
+\usepackage{listings}        % Code
+%\usepackage{minted}         % Code Syntax Highlithing
 %\usepackage[                % Misc?
 %    bottom
 %]{footmisc}
@@ -123,7 +137,7 @@
 
 \lstdefinestyle{ACMstyle}{
     basicstyle=\ttfamily\small,
-%keywordstyle=\color{blue}\bfseries,
+%keywordstyle=\color{blue}\bfseries,s
     commentstyle=\color{gray}\itshape,
 %stringstyle=\color{orange},
     numberstyle=\tiny\color{gray},
@@ -148,10 +162,13 @@
 %% end of the preamble, start of the body of the document source.
 \begin{document}
 
+    % Command for the name so that we can anonymize quickly if needed.
+    \newcommand{\Kitsurai}{Rustkai\xspace}
+
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-    \title{Kitsurai: a distributed real-time key-value store in Rust}
+    \title{\Kitsurai: a distributed real-time key-value store in Rust}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -159,28 +176,28 @@
 %% Of note is the shared affiliation of the first two authors, and the
 %% "authornote" and "authornotemark" commands
 %% used to denote shared contribution to the research.
-    \author{Filippo Casarin}
-    \email{Filippo.Casarin@santannapisa.it}
+    \author{Author 1}
+    \email{author.one@institution}
     \affiliation{%
-        \institution{Scuola Superiore Sant’Anna}
-        \city{Pisa}
-        \country{Italy}
+        \institution{Institution}
+        \city{City}
+        \country{Country}
     }
 
-    \author{Jacopo Del Granchio}
-    \email{Jacopo.DelGranchio@santannapisa.it}
+    \author{Author 2}
+    \email{author.two@institution}
     \affiliation{%
-        \institution{Scuola Superiore Sant’Anna}
-        \city{Pisa}
-        \country{Italy}
+        \institution{Institution}
+        \city{City}
+        \country{Country}
     }
 
-    \author{Tommaso Cucinotta}
-    \email{Tommaso.Cucinotta@santannapisa.it}
+    \author{Author 3}
+    \email{author.third@institution}
     \affiliation{%
-        \institution{Scuola Superiore Sant’Anna}
-        \city{Pisa}
-        \country{Italy}
+        \institution{Institution}
+        \city{City}
+        \country{Country}
     }
 
 %% By default, the full list of authors will be used in the page
