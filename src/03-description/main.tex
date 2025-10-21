@@ -12,10 +12,10 @@
 %- No Consistenza: si fa con un layer aggiuntivo
 %- API client + tabelle senza nome
 
-The data store is organized into \emph{tables}, each identified by a
+Kitsurai stores users' data in a set of \emph{tables}, each identified by a
 UUID~\cite{rfc9562}.
-Every table contains key-value pairs, where both keys and values are byte
-arrays.
+Every table contains key-value pairs, where both keys and values are
+uninterpreted arrays of bytes.
 
 A Kitsurai system operates on a \emph{cluster} composed of a static set of
 nodes, a \emph{node} corresponds to an instance of the program running on a
@@ -41,7 +41,8 @@ Each table has four parameters specified by the user at creation time:
         that must successfully respond to a write request.
 \end{itemize}
 
-Parameters must satisfy the constraints $1 \leq R, W \leq N$ and $B > 0$.
+Parameters must satisfy the constraints $R, W \in \{ 1, 2, ..., N \}$ and
+$B > 0$.
 
 Additionally, the system computes four parameters automatically:
 \begin{itemize}
@@ -63,9 +64,9 @@ client-tunable quorums. We make two deliberate design choices:
 
 \begin{itemize}
     \item \textbf{No replica reconciliation.}
-        The system performs \emph{no} server-side conflict resolution,
-        \emph{no} read repair, and \emph{no} background anti-entropy for item
-        payloads.
+        Item payloads receive \emph{no} server-side conflict resolution and
+        \emph{no} catch-up to the latest value for restarting or recovering
+        replicas.
         Replicas that miss a write may indefinitely retain a divergent value
         until a later client write updates them.
     \item \textbf{Multi-value reads.}
@@ -80,8 +81,7 @@ quorum.
 A write to key $k$ is considered \emph{committed} once any $W$ replicas
 acknowledge persisting the value; the system does not subsequently propagate
 that value to the remaining $N - W$ replicas.
-A read for $k$ completes once responses from any $R$ replicas are received
-(within the request deadline).
+A read for key $k$ completes once responses from any $R$ replicas are received.
 
 \paragraph{Quorum intersection.}
 If $R + W > N$, then any set of $R$ replicas intersects any set of $W$
@@ -90,7 +90,7 @@ Consequently, every read that gathers $R$ replies contains \emph{at least one}
 payload written by any previously completed write.
 However, in the presence of concurrent or failed writes, multiple distinct
 payloads can appear in the read result, and the store offers no mechanism to
-identify which is newest.
+determine which is the ``latest'' value.
 
 \subsection{Client API}
 \label{subsec:interface}
@@ -107,7 +107,7 @@ The client sends four parameters: $B$, $N$, $R$, and $W$.
 The system allocates enough bandwidth on the nodes to satisfy the requested
 parameters, creates the table, and returns the generated \texttt{id} of the new
 table.
-If it's not possible to satisfy the requested parameters, the operation fails
+If it is not possible to satisfy the requested parameters, the operation fails
 and returns an error.
 
 \subsubsection{\texttt{table-delete}}
@@ -122,7 +122,7 @@ The system marks the table as deleted and frees the allocated resources.
 The client sends the \texttt{id} of the table and the \texttt{key} to be
 retrieved.
 The system forwards the request to the responsible nodes and waits for at least
-$R$ successful responses.
+$R$ successful responses within a system-wide configurable timeout.
 If the operation succeeds, it returns a list of the values received from the
 nodes; otherwise, it returns an error with the successfully collected values.
 
@@ -132,7 +132,7 @@ nodes; otherwise, it returns an error with the successfully collected values.
 The client sends the \texttt{id} of the table, the \texttt{key}, and the
 \texttt{value} to be set.
 The system forwards the request to the responsible nodes and waits for at least
-$W$ successful responses.
+$W$ successful responses within a system-wide configurable timeout.
 If the operation succeeds, it returns a success message; otherwise, it returns
 an error.
 
@@ -147,13 +147,24 @@ an error.
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
 
-To increase data availability, each node can be tagged with an
-\emph{Availability Zone} identifier, which is a string representing a physical
-or logical grouping of nodes.
-When creating a table, the system ensures that each key-value pair is stored on
-nodes with different Availability Zones.
-This way, even if an entire Availability Zone fails, the data remains
-accessible from other zones.
+To improve fault tolerance and ensure continuous data accessibility, Kitsurai
+adopts a replication strategy based on \emph{Availability Zones} (AZs).
+Each node within the cluster is associated with an Availability Zone
+identifier, a symbolic label representing either a physical or a logical
+grouping of nodes, such as distinct data centers, server racks, or virtual
+clusters distributed across geographical regions.
+
+During table creation, the system enforces a zone-aware placement policy that
+guarantees every key–value pair is replicated on $N$ nodes belonging to $N$
+distinct Availability Zones.
+Consequently, no two replicas of the same item reside within the same zone.
+
+This design minimizes the likelihood of correlated failures leading to data
+unavailability and ensures that a table remains operational even in the event
+of a complete zone outage.
+As long as the number of available zones satisfies the quorum parameters $(R,
+W)$ defined for the table, Kitsurai continues to serve read and write requests
+using replicas from these zones.
 
 \subsection{Throughput Throttling}
 \label{subsec:throughput-throttling}

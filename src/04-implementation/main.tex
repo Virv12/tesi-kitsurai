@@ -33,8 +33,9 @@ To read or write a key, the following steps are performed:
     replies.
 \end{enumerate}
 
-If fewer than $R$ (or $W$) nodes respond successfully, the
-operation fails and an error is returned to the client.
+If fewer than $R$ (or $W$) nodes respond successfully within a system-wide
+configurable timeout, the operation fails and an error is returned to the
+client.
 
 \input{04-implementation/ring}
 

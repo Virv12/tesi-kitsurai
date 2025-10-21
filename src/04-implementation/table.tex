@@ -119,7 +119,7 @@ The table will then be considered globally \emph{deleted} and, thanks to the
 Gossip protocol, the other nodes will synchronize and the table will be
 considered deleted by all nodes.
 
-Even if it's not strictly necessary, the node receiving the deletion request
+Even if it is not strictly necessary, the node receiving the deletion request
 acts as a router, informing all responsible nodes of the deletion, to allow
 them to free the allocated bandwidth and storage space more quickly, and
 prevent further read or write requests to the deleted table.
