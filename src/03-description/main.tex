@@ -12,13 +12,13 @@
 %- No Consistenza: si fa con un layer aggiuntivo
 %- API client + tabelle senza nome
 
-\Kitsurai stores users' data in a set of \emph{tables}, each identified by a
+Rustikai stores users' data in a set of \emph{tables}, each identified by a
 UUID~\cite{rfc9562}.
 Every table contains key-value pairs, where both keys and values are
 uninterpreted arrays of bytes.
 
-A \Kitsurai system operates on a \emph{cluster} composed of a static (see
-Section \ref{subsec:limitations}) set of nodes; a \emph{node} corresponds to an
+A Rustikai system operates on a \emph{cluster} composed of a static (see
+Section~\ref{subsec:limitations}) set of nodes; a \emph{node} corresponds to an
 instance of the program running on a physical or virtual machine.
 Each node may be temporarily unavailable due to failures or network partitions,
 and the system is designed to be resilient to such events and to continue operating
@@ -33,17 +33,15 @@ Each table has four parameters specified by the user at creation time:
 \begin{itemize}
     \item \texttt{bandwidth} or $B$: the number of requests, as perceived by
         the client, that the system must guarantee for the table, expressed in
-        requests per second (see Section \ref{subsec:bandwidth-model}).
+        requests per second (see Section~\ref{subsec:bandwidth-model}).
     \item $N$: the replication factor for each key-value pair.
     \item \texttt{read\_concern} or $R$: the minimum number of nodes that must
-        successfully respond to a read request (see Section
-        \ref{subsec:consistency}).
+        successfully respond to a read request (see Section~\ref{subsec:consistency}).
     \item \texttt{write\_concern} or $W$: the minimum number of nodes
         that must successfully respond to a write request.
 \end{itemize}
 
-Parameters must satisfy the constraints $R, W \in \{ 1, 2, ..., N \}$ and
-$B > 0$.
+Parameters must satisfy the constraints $R, W \in \{ 1, 2, \dots, N \}$ and $B > 0$.
 
 Additionally, the system computes five parameters automatically:
 \begin{itemize}
@@ -101,7 +99,7 @@ recent value.
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
 
-To improve fault tolerance and ensure continuous data accessibility, \Kitsurai
+To improve fault tolerance and ensure continuous data accessibility, Rustikai
 adopts a replication strategy based on \emph{Availability Zones} (AZs).
 Each node within the cluster is associated with an Availability Zone
 identifier, a symbolic label representing either a physical or a logical
@@ -146,7 +144,7 @@ scales with cluster size as additional nodes contribute independent capacity.
 \subsection{Bandwidth Allocation Model}
 \label{subsec:bandwidth-model}
 
-\Kitsurai adopts a conservative, request-per-second based admission policy.
+Rustikai adopts a conservative, request-per-second based admission policy.
 At table creation, the allocator assumes that \emph{all} requests issued by the
 table may carry the \emph{maximum allowed payload size}, and evaluates
 feasibility under this worst-case condition.
@@ -216,7 +214,7 @@ an error.
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{03-description/architecture}
-    \caption{\Kitsurai architecture overview. Clients can send requests to any
+    \caption{Rustikai architecture overview. Clients can send requests to any
         node, which routes them to the responsible nodes for the requested
         table.}
     \label{fig:architecture}

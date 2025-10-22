@@ -1,7 +1,7 @@
 \section{Conclusions}
 \label{sec:conclusions}
 
-The \Kitsurai project was developed with the goal of creating a distributed key-value store
+The Rustikai project was developed with the goal of creating a distributed key-value store
 capable of offering predictable and guaranteed performance in multi-tenant environments,
 matching enterprise solutions like DynamoDB~\cite{Dynamo2022},
 a requirement often overlooked in major existing open-source solutions such as Cassandra~\cite{Cassandra} and MongoDB~\cite{Mongo}.
@@ -57,10 +57,10 @@ Several additional features could be built atop the existing system as middlewar
 A parallel line of research, addressing similar concerns from a systems perspective, is that of CPU schedulers for real-time processes.
 As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
 the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
-Our implementation, through Rust's \texttt{tokio} runtime -- the de facto standard\footnote{
+Our implementation, through Rust’s \texttt{tokio} runtime --- the de facto standard\footnote{
     \href{https://crates.io}{crates.io} reports over 416 million all-time downloads for \texttt{tokio},
     compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
-} for asynchronous programming in Rust -- uses a multi-threaded work-stealing scheduler
+} for asynchronous programming in Rust --- uses a multi-threaded work-stealing scheduler
 which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
 but provides no explicit latency control as some more advanced algorithms could.
 On the same topic, both the operating system IO and packet scheduler could and/or should be enhanced by a similar approach,

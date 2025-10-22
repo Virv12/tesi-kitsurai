@@ -13,7 +13,7 @@ A characterizing feature of Cloud computing is multi-tenancy, where several cust
 This brings a number of advantages in terms of flexibility in resources management, but it also introduces additional challenges.
 In the absence of explicit isolation mechanisms, a particularly active tenant can compromise the quality of service offered to others,
 making precise throughput control for each client essential.
-These constraints create a space of hard engineering and algorithmic problems -- from replication protocols to resource managers -- that must be solved jointly.
+These constraints create a space of hard engineering and algorithmic problems --- from replication protocols to resource managers --- that must be solved jointly.
 Building practical, tenant-aware replicated stores thus requires cross-layer designs spanning networking, storage, and control planes.
 
 Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
@@ -37,7 +37,7 @@ and literature~\cite{ColumnarSurvey, ColumnOrientedDatabase} has intensified its
 compression and execution techniques that exploit columnar layouts to minimize I/O and CPU overhead for selective and analytical queries.
 
 \paragraph{Paper Contributions}
-The \Kitsurai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
+The Rustikai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
 It achieves this with a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.

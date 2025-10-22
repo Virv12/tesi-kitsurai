@@ -20,7 +20,7 @@ These capacities are also used by an internal monitoring system that tracks part
 and splits them dynamically across multiple physical nodes.
 
 Recently, \textit{X-Stor}~\cite{XStor}, a cloud-native multi-model NoSQL data store, introduced a generalized Request Unit (RU) abstraction
-that encompasses all resource types -- CPU, memory, disk I/O, and network I/O -- into a single unified metric.
+that encompasses all resource types --- CPU, memory, disk I/O, and network I/O --- into a single unified metric.
 This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
 Unlike DynamoDB's approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
 
@@ -40,7 +40,7 @@ and propose a randomized approach to overcome this limitation.
 \textit{SWIM}~\cite{SWIM} builds on this idea, introducing a scalable gossip-based membership protocol
 that combines epidemic dissemination with a suspicion mechanism to ensure robustness and bounded detection time.
 While failure detection itself lies outside the scope of our work, we nonetheless adopt a randomized peer selection
-strategy -- similar in spirit to scalable failure detectors -- for the gossip dissemination in our implementation.
+strategy --- similar in spirit to scalable failure detectors --- for the gossip dissemination in our implementation.
 
 % MAYBE: CosmosDB potrebbe essere un'altro di cui parlare
 % MAYBE: Aerospike potrebbe essere un'altro di cui parlare
