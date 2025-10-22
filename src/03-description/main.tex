@@ -114,14 +114,14 @@ Consequently, no two replicas of the same item reside within the same zone.
 This design minimizes the likelihood of correlated failures leading to data
 unavailability and ensures that a table remains operational even in the event
 of a complete zone outage.
-As long as the number of available zones satisfies the quorum parameters $(R,
-W)$ defined for the table, \Kitsurai continues to serve read and write requests
+As long as the number of available zones satisfies the quorum parameters $(R, W)$
+defined for the table, Rustikai continues to serve read and write requests
 using replicas from these zones.
 
 \subsection{Throughput Throttling}
 \label{subsec:throughput-throttling}
 
-In a multi-tenant setting, \Kitsurai enforces predictable performance and fair
+In a multi-tenant setting, Rustikai enforces predictable performance and fair
 resource distribution through explicit \emph{throughput throttling} applied
 \emph{per node and per table}.
 Each node regulates admission against its locally allocated share $s_i$ of a

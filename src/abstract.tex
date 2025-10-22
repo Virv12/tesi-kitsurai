@@ -2,22 +2,22 @@ Building multi-tenant key-value stores with predictable and stable performance
 turns out to be difficult, due to the need for tackling several performance engineering challenges.
 As a result, most of the NoSQL systems offer best-effort throughput and weak isolation under contention.
 
-We present \Kitsurai, an open-source, distributed and leaderless store that provides explicit
+We present Rustikai, an open-source, distributed and leaderless store that provides explicit
 per-table throughput reservations while retaining horizontal scalability and high availability.
 Reservations are admitted at table creation through a cluster-wide allocator;
 enforcement relies on a bandwidth-proportional replication ring that balances
 load across availability zones and respects per-node budgets.
 
 Clients tune quorums ($N$, $R$, $W$) to trade latency and durability.
-To keep the data path simple and resource-efficient, \Kitsurai avoids
+To keep the data path simple and resource-efficient, Rustikai avoids
 server-side reconciliation and background repair, tolerating multi-value reads
 when versions diverge.
 
-\Kitsurai sustains reserved rates under co-located hot tenants, scales close to
+Rustikai sustains reserved rates under co-located hot tenants, scales close to
 analytic expectations across uniform and skewed workloads, and keeps tail
 latency modest without explicit latency control mechanism.
-By isolating tenants by construction \Kitsurai turns capacity planning into an
+By isolating tenants by construction Rustikai turns capacity planning into an
 explicit, auditable contract, suggesting a practical path to predictable
 performance in simple, leaderless key-value architectures.
-\Kitsurai is implemented in the Rust programming language for enhanced efficiency and safety,
+Rustikai is implemented in the Rust programming language for enhanced efficiency and safety,
 and the availability of a growing ecosystem of high-quality libraries that simplify the development of complex distributed systems.
