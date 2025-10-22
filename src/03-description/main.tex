@@ -17,9 +17,9 @@ UUID~\cite{rfc9562}.
 Every table contains key-value pairs, where both keys and values are
 uninterpreted arrays of bytes.
 
-A \Kitsurai system operates on a \emph{cluster} composed of a static set of
-nodes, a \emph{node} corresponds to an instance of the program running on a
-physical or virtual machine.
+A \Kitsurai system operates on a \emph{cluster} composed of a static (see
+Section \ref{subsec:limitations}) set of nodes, a \emph{node} corresponds to an
+instance of the program running on a physical or virtual machine.
 Each node may be temporarily unavailable due to failures or network partitions,
 the system is designed to be resilient to such events and to continue operating
 as long as a sufficient number of nodes are available.
@@ -169,23 +169,47 @@ using replicas from these zones.
 \subsection{Throughput Throttling}
 \label{subsec:throughput-throttling}
 
-In a multi-tenant system such as \Kitsurai, it is necessary to prevent a single
-client from monopolizing resources and compromising the performance of others.
-For this reason, \Kitsurai implements a throughput throttling mechanism that
-guarantees each table the bandwidth requested at table creation, even in the
-presence of high and concurrent loads.
+In a multi-tenant setting, \Kitsurai enforces predictable performance and fair
+resource distribution through explicit \emph{throughput throttling} applied
+\emph{per node and per table}.
+Each node regulates admission against its locally allocated share $s_i$ of a
+table’s budget, preventing co-located workloads from interfering and ensuring
+that no single table can monopolize local resources.
+
+The regulator is rate-based and converges to the configured average rate on
+each node, while permitting a short, bounded burst (on the order of
+\SI{100}{\milli\second} to absorb microbursts.
+Over longer intervals, the admitted throughput per node is bounded to $s_i$,
+yielding table-level guarantees in aggregate without relying on a centralized
+gate.
+A request exceeding the local budget is going to wait until capacity is
+available again.
+
+This \emph{per-node, per-table} throttling improves scalability: admission
+control is fully decentralized, avoids single-node bottlenecks, and naturally
+scales with cluster size as additional nodes contribute independent capacity.
 
 \subsection{Bandwidth Allocation Model}
 \label{subsec:bandwidth-model}
 
-For bandwidth allocation, \Kitsurai adopts a very simple model: it assumes that
-the maximum amount of operations per second a machine can execute is fixed and
-independent of other factors such as the size of the data being read or
-written.
+\Kitsurai adopts a conservative, RPS-based (request per second) admission
+policy.
+At table creation, the allocator assumes that \emph{all} requests issued by the
+table may carry the \emph{maximum allowed payload size}, and evaluates
+feasibility under this worst-case condition.
+The maximum payload size is configurable system-wide, so
+deployments can tune guarantees to their hardware capabilities.
 
-For this reason, each node only needs to know its maximum bandwidth, measured
-beforehand using standard profiling operations, to determine whether it is able
-to handle the load requested by a table.
-For this purpose, SSD disks must be used, as they provide constant and
-predictable performance, unlike HDDs, which are subject to unpredictable
-slowdowns due to seek operations and access latency.
+This pessimistic approach ensures that, if a table is admitted, each node can
+sustain the requested throughput even under worst-case scenarios.
+To support sound admission tests, each node must be \emph{profiled} prior to
+service: its sustained capacity in requests per second is measured using
+payloads of maximum size and then used by the allocator as that node's
+budget.
+
+However, to ensure the validity of this model, storage devices must be
+solid-state drives.
+Indeed, a rotational HDDs exhibit seek time and rotational latency that cause
+high variance and long-tail stalls, invalidating the constant-throughput
+abstraction required by the allocator; therefore, SSDs are required to provide
+sufficiently predictable performance for the guaranteed rates.

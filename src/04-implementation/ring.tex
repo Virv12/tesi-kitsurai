@@ -7,27 +7,27 @@ while satisfying the following requirements:
 \begin{enumerate}
     \item Each key is replicated on $N$ nodes, each from a distinct
         availability zone.
-    \item $w_i \leq s_i$ for each node $i$, where $w_i$ is the workload on node
-        $i$ and $s_i$ is the bandwidth allocated by that node for the table,
-        both measured in requests per second.
+    \item $\mathbb{E}[w_i] \leq s_i$ for each node $i$, where $w_i$ is the
+        workload on node $i$ and $s_i$ is the bandwidth allocated by that node
+        for the table, both measured in requests per second.
 \end{enumerate}
 
-The workload on the $i$-th node is $w_i = \sum_{k \in K_i} p_k \cdot B$ where
-$K_i$ is the set of keys assigned to node $i$, $p_k$ is the probability that
-key $k$ is requested and $B$ is the total bandwidth of the table, in requests
-per second.
+The expected workload on the $i$-th node is $\mathbb{E}[w_i] = \sum_{k \in K_i}
+p_k \cdot B$ where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
+probability that key $k$ is requested and $B$ is the total bandwidth of the
+table, in requests per second.
 
 An adverse distribution of keys in requests would make it impossible to scale
 the table on multiple nodes, for example if node $i$ is assigned a key $k$ such
-that $p_k = 1$ we get that $w_i = B \leq s_i$, requiring that node $i$ is able
-to handle the entire table workload.
+that $p_k = 1$ we get that $\mathbb{E}[w_i] = B \leq s_i$, requiring that node
+$i$ is able to handle the entire table workload.
 To avoid this problem, we assume that keys are uniformly distributed, i.e.,
 $p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is set of keys
 in the table.
 
-Under this assumption, the workload on node $i$ is $w_i = \frac{|K_i|}{|K|}
-\cdot B$ so we can rewrite the second requirement as $\frac{|K_i|}{|K|} \leq
-\frac{s_i}{B}$.
+Under this assumption, the expected workload on node $i$ is
+$\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$ so we can rewrite the second
+requirement as $\frac{|K_i|}{|K|} \leq \frac{s_i}{B}$.
 
 Since we don't want to waste resources, we are going to strengthen the
 requirement and enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
