@@ -22,16 +22,16 @@ However, providing latency and performance guarantees in distributed and multi-t
 
 Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
 without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
-Due to the inability to isolate traffic from multiple tenants, solutions like these often deployed as separate instances per customer,
+Due to the inability to isolate traffic from multiple tenants, solutions like these are often deployed as separate instances per customer,
 thereby shifting resource-management and isolation responsibilities to the underlying cluster scheduler or provisioning layer.
 
 Even in major commercial NoSQL solutions, like Google's \textit{BigTable}~\cite{Bigtable},
 quota and throttling systems were only introduced later as useful feature and were not part of the original design.
 Its underlying storage \textit{GFS}~\cite{GFS} also does not make latency one of its main features,
-focusing instead on performance for higher throughput, and is also deployed in multiple cluster to support differentiated applications.
+focusing instead on performance for higher throughput, and is also deployed in multiple clusters to support differentiated applications.
 
 The same fundamental performance problem has been tackled in columnar data stores,
-who provide faster access to individual columns than classic relational databases.
+which provide faster access to individual columns than classic relational databases.
 Development in the last years has increased due to growing analytical workloads,
 and literature~\cite{ColumnarSurvey, ColumnOrientedDatabase} has intensified its focus on storage layouts,
 compression and execution techniques that exploit columnar layouts to minimize I/O and CPU overhead for selective and analytical queries.
@@ -51,7 +51,7 @@ In addition, it has an ever-growing set of high quality libraries that simplifie
 \paragraph{Paper Organization}
 The paper is organized as follows: Section~\ref{sec:related}
 reviews related work and situates our approach within previous research.
-Section~\ref{sec:architecture} presents the system’s assumptions, API, and overall architecture,
+Section~\ref{sec:architecture} presents the system's assumptions, API, and overall architecture,
 followed by Section~\ref{sec:implementation}, which details our approach and main algorithm.
 Section~\ref{sec:results} discusses the experimental results,
 highlighting how the system maintains the expected throughput when scaling across multiple machines.

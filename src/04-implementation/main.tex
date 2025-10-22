@@ -2,7 +2,7 @@
 \label{sec:implementation}
 
 %### Algoritmo di distribuzione con formula diretta
-%assumendo tabella distribuita su più az
+%assumendo tabella distribuita su piu` az
 %"Algoritmo"/Esempio get + set, concetto di router
 %
 %## Creazione e Distruzione Tabelle
@@ -44,14 +44,14 @@ client.
 \subsection{RPC}
 \label{subsec:rpc}
 
-Nodes communicate with each other using a custom RPC protocol over HTTP/2, it
-was chosen for its multiplexing capabilities, allowing multiple simultaneous
+Nodes communicate with each other using a custom RPC protocol over HTTP/2.
+It was chosen for its multiplexing capabilities, allowing multiple simultaneous
 requests over a single TCP connection, reducing latency and resource
 consumption.
 For efficiency, nodes maintain persistent connections with each other, reusing
 them for multiple requests, we have observed that a single connection is not
 able to saturate the machine's resources, so each node maintains up to 20
-connections with each other node.
+connections to each other node.
 
 A request-response cycle consists of the following steps:
 \begin{enumerate}

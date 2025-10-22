@@ -19,13 +19,13 @@ and which allowed us to measure the performance of CPU and disk.
 
 A purpose-built program (\texttt{ktb}) was developed to stress the system using multiple connections.
 We first recorded baseline values by having each machine stress itself in both \texttt{item-get} and \texttt{item-set} operations
-on a table with throttling disabled (i.e., \texttt{item-set} to sufficiently high limit) and value sizes of \SI{4}{\kilo\byte}.
+on a table with throttling disabled (i.e., set to sufficiently high limit) and value sizes of \SI{4}{\kilo\byte}.
 
-Table~\ref{tab:results-stress} presents the results, which allows us to rank the machine as follows: $2H \approx M \approx A$.
+Table~\ref{tab:results-stress} presents the results, across the get (\SI{4}{\kilo\byte}) test, we observe $H > M > A$; for set (\SI{4}{\kilo\byte}), $2H \approx M \approx A$.
 \texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the \SI{1}{\giga\bit} connection.
 
 The scalability and replication of the system were then evaluated.
-Unless stated otherwise, The following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
+Unless stated otherwise, the following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
 \texttt{item-get} operations were excluded because the operating system caches file reads, making their results unrepresentative of true random-access disk performance.
 Nevertheless, the measured req/s values for \texttt{item-get} operations are reported in Table~\ref{tab:results-stress}.
 
@@ -43,7 +43,7 @@ In the uniform case, each machine receives one third of the requests.
 Thus, the slowest machine will be the first one to limit the number of requests.
 We can therefore expect the overall rate to be three times the minimum individual rate,
 as the other two machines will receive the same rate of request as the slowest one.
-In our setup, the slowest machine is $A$, which achieved \SI{4.8}{\kilo\hertz}, yielding and expected overall rate of \SI{14.4}{\kilo\hertz}.
+In our setup, the slowest machine is $A$, which achieved \SI{4.8}{\kilo\hertz}, yielding an expected overall rate of \SI{14.4}{\kilo\hertz}.
 
 
 In the proportional case, as long as the machine bandwidth was configured correctly, no single machine should become a bottleneck.
@@ -157,6 +157,6 @@ Overall, a slight increase in latency was observed, which is expected, as no exp
     \end{tabular}
 \end{table}
 
-% TODO: Una sezione che spiega due cose in più ci potrebbe stare, viene anche decentemente lunga.
+% TODO: Una sezione che spiega due cose in piu` ci potrebbe stare, viene anche decentemente lunga.
 %\subsection{Key Distribution Error}
 %\label{subsec:key-distribution-error}

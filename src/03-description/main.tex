@@ -18,10 +18,10 @@ Every table contains key-value pairs, where both keys and values are
 uninterpreted arrays of bytes.
 
 A \Kitsurai system operates on a \emph{cluster} composed of a static (see
-Section \ref{subsec:limitations}) set of nodes, a \emph{node} corresponds to an
+Section \ref{subsec:limitations}) set of nodes; a \emph{node} corresponds to an
 instance of the program running on a physical or virtual machine.
 Each node may be temporarily unavailable due to failures or network partitions,
-the system is designed to be resilient to such events and to continue operating
+and the system is designed to be resilient to such events and to continue operating
 as long as a sufficient number of nodes are available.
 Each node can be assigned to an \emph{Availability Zone} (see
 Section~\ref{subsec:availability-zones}).
@@ -45,7 +45,7 @@ Each table has four parameters specified by the user at creation time:
 Parameters must satisfy the constraints $R, W \in \{ 1, 2, ..., N \}$ and
 $B > 0$.
 
-Additionally, the system computes four parameters automatically:
+Additionally, the system computes five parameters automatically:
 \begin{itemize}
     \item \texttt{id}: a UUID identifying the table, generated at creation.
     \item \texttt{responsible\_nodes}: the list of nodes, possibly
@@ -60,7 +60,7 @@ Additionally, the system computes four parameters automatically:
 \subsection{Consistency and Client-Visible Semantics}
 \label{subsec:consistency}
 
-Our store is a best-effort, partition-tolerant key–value service with explicit
+Our store is a best-effort, partition-tolerant key-value service with explicit
 client-tunable quorums. We make two deliberate design choices:
 
 \begin{itemize}
@@ -109,7 +109,7 @@ grouping of nodes, such as distinct data centers, server racks, or virtual
 clusters distributed across geographical regions.
 
 During table creation, the system enforces a zone-aware placement policy that
-guarantees every key–value pair is replicated on $N$ nodes belonging to $N$
+guarantees every key-value pair is replicated on $N$ nodes belonging to $N$
 distinct Availability Zones.
 Consequently, no two replicas of the same item reside within the same zone.
 
@@ -127,17 +127,17 @@ In a multi-tenant setting, \Kitsurai enforces predictable performance and fair
 resource distribution through explicit \emph{throughput throttling} applied
 \emph{per node and per table}.
 Each node regulates admission against its locally allocated share $s_i$ of a
-table’s budget, preventing co-located workloads from interfering and ensuring
+table's budget, preventing co-located workloads from interfering and ensuring
 that no single table can monopolize local resources.
 
 The regulator is rate-based and converges to the configured average rate on
-each node, while permitting a short, bounded burst (on the order of
-\SI{100}{\milli\second} to absorb microbursts.
+each node, while permitting a short, bounded burst of \SI{100}{\milli\second}
+to absorb micro-bursts.
 Over longer intervals, the admitted throughput per node is bounded to $s_i$,
 yielding table-level guarantees in aggregate without relying on a centralized
 gate.
-A request exceeding the local budget is going to wait until capacity is
-available again.
+A request exceeding the local budget will wait until capacity is available
+again.
 
 This \emph{per-node, per-table} throttling improves scalability: admission
 control is fully decentralized, avoids single-node bottlenecks, and naturally
@@ -146,8 +146,7 @@ scales with cluster size as additional nodes contribute independent capacity.
 \subsection{Bandwidth Allocation Model}
 \label{subsec:bandwidth-model}
 
-\Kitsurai adopts a conservative, RPS-based (request per second) admission
-policy.
+\Kitsurai adopts a conservative, request-per-second based admission policy.
 At table creation, the allocator assumes that \emph{all} requests issued by the
 table may carry the \emph{maximum allowed payload size}, and evaluates
 feasibility under this worst-case condition.
@@ -163,7 +162,7 @@ budget.
 
 However, to ensure the validity of this model, storage devices must be
 solid-state drives.
-Indeed, a rotational HDDs exhibit seek time and rotational latency that cause
+Indeed, rotational HDDs exhibit seek time and rotational latency that cause
 high variance and long-tail stalls, invalidating the constant-throughput
 abstraction required by the allocator; therefore, SSDs are required to provide
 sufficiently predictable performance for the guaranteed rates.
@@ -202,7 +201,8 @@ retrieved.
 The system forwards the request to the responsible nodes and waits for at least
 $R$ successful responses within a system-wide configurable timeout.
 If the operation succeeds, it returns a list of the values received from the
-nodes; otherwise, it returns an error with the successfully collected values.
+nodes; otherwise, it returns an error and includes any values successfully
+collected.
 
 \subsubsection{\texttt{item-set}}
 \label{subsubsec:item-set}

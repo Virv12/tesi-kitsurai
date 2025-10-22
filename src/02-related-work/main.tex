@@ -2,7 +2,7 @@
 \label{sec:related}
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
-Amazon’s Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
+Amazon's Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
 based on consistent hashing from~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
 Conflicting updates are detected through versioning and are resolved
@@ -11,10 +11,10 @@ otherwise the user itself is made to choose a good version (semantic reconciliat
 For readers seeking more detailed information, a comprehensive overview of consistency models
 can be found in the work of Bermbach et al.~\cite{ConsistencyOverview}.
 Cassandra~\cite{Cassandra} extends this design with tunable consistency levels and wide-column data modeling.
-As with Dynamo's sematic reconciliation, Cassandra’s append-only write design results in more expensive reads,
+As with Dynamo's semantic reconciliation, Cassandra's append-only write design results in more expensive reads,
 but enables significantly higher write throughput.
 
-Amazon’s DynamoDB~\cite{Dynamo2022, DynamoWhitepaper} later introduced the notion of per-table bandwidth quotas,
+Amazon's DynamoDB~\cite{Dynamo2022, DynamoWhitepaper} later introduced the notion of per-table bandwidth quotas,
 expressed as \textit{Read Capacity Units} (RCUs) and \textit{Write Capacity Units} (WCUs), used to limit client requests.
 These capacities are also used by an internal monitoring system that tracks partitions which can no longer meet the requested capacity
 and splits them dynamically across multiple physical nodes.
@@ -22,12 +22,12 @@ and splits them dynamically across multiple physical nodes.
 Recently, \textit{X-Stor}~\cite{XStor}, a cloud-native multi-model NoSQL data store, introduced a generalized Request Unit (RU) abstraction
 that encompasses all resource types -- CPU, memory, disk I/O, and network I/O -- into a single unified metric.
 This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
-Unlike DynamoDB’s approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
+Unlike DynamoDB's approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
 
 Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip-based metadata synchronization.
 It carries over DynamoDB's per-table bandwidth reservations, but introduces a creation-time admission control,
 allowing the system to refuse table creation when cluster resources cannot satisfy the requested guarantees.
-We manage to do this by re-using the same base ideas as in Karger et al.\ consistent hashing by using
+We manage to do this by re-using the same base ideas as in Karger et al.'s consistent hashing by using
 a predictable distribution that allows for controlled access control.
 It is beyond the scope of this paper to address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
 Moreover, to further simplify the design and reduce the scope of this paper,

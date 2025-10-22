@@ -22,8 +22,8 @@ the table on multiple nodes, for example if node $i$ is assigned a key $k$ such
 that $p_k = 1$ we get that $\mathbb{E}[w_i] = B \leq s_i$, requiring that node
 $i$ is able to handle the entire table workload.
 To avoid this problem, we assume that keys are uniformly distributed, i.e.,
-$p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is set of keys
-in the table.
+$p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is the set of
+keys in the table.
 
 Under this assumption, the expected workload on node $i$ is
 $\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$ so we can rewrite the second
@@ -67,9 +67,9 @@ By summing the second requirement over all nodes, we obtain $\frac{1}{|K|} \sum
 Since each key is assigned to exactly $N$ nodes, we have $\sum |K_i| = N
 \cdot |K|$, and so $S = B \cdot N$.
 
-To solve this problem we will use the \emph{replication ring}, this structure
-will require that values $S$, $B$ and all $s_i$ are integers with a granularity
-of $1$ request per second.
+To solve this problem we will use the \emph{replication ring}.
+This structure will require that the values $S$, $B$ and all $s_i$ be integers
+with a granularity of $1$ request per second.
 We define the \emph{replication ring} as a circular array of size $S$ where for
 each position in the ring we assign a node $i$ such that:
 
@@ -83,7 +83,7 @@ Given a key $k$, we find its starting position $p$ in the ring using its hash
 value (using \texttt{XXH3}\footnote{\url{https://xxhash.com}}, a fast
 non-cryptographic hash algorithm) and taking the result modulo $S$.
 The key is then assigned to the $N$ nodes immediately following the
-computed position, i.e., to the nodes at positions $p, p + 1, \dots, p + n - 1$
+computed position, i.e., to the nodes at positions $p, p + 1, \dots, p + N - 1$
 (wrapping around the ring if necessary).
 
 Since each interval of length $N$ contains distinct nodes, each key is assigned
@@ -222,7 +222,7 @@ and $r_4 = 1$ (see Figure~\ref{fig:ring-example}).
 \label{subsubsec:implicit-construction}
 
 Since the allocated bandwidth can be considerably high, constructing the ring
-explicitly may be really expensive.
+explicitly may be very expensive.
 To avoid this, we look for an algorithm that directly computes the node
 assigned to a position $p$ in the ring.
 Let $o_p$ be the iteration at which the $p$-th position is assigned.
@@ -261,7 +261,7 @@ time $O(m)$ and constant memory, without explicitly building the ring.
 
 The algorithm can be further optimized using a binary search on the prefix sums
 of $s_i$, assuming they are already computed and stored.
-In this case the algorithm runs $O(\log m)$ time and $O(m)$ memory.
+In this case the algorithm runs in $O(\log m)$ time and uses $O(m)$ memory.
 
 \paragraph{Example}
 Let's apply the implicit construction to the example in the previous section.

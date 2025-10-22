@@ -4,7 +4,7 @@
 The \Kitsurai project was developed with the goal of creating a distributed key-value store
 capable of offering predictable and guaranteed performance in multi-tenant environments,
 matching enterprise solutions like DynamoDB~\cite{Dynamo2022},
-a requirement often overlooked in major existing open-source solutions such as Cassandra~\cite{Cassandra} and MongoDB~\cite{RTMongo}.
+a requirement often overlooked in major existing open-source solutions such as Cassandra~\cite{Cassandra} and MongoDB~\cite{Mongo}.
 
 While the developed system still leaves ample room for improvement,
 it demonstrates how the proposed techniques can be effectively used to design
@@ -28,13 +28,13 @@ opportunities for future research and development.
 The current system assumes a static set of peers,
 whereas real-world deployments require the ability to dynamically join and leave the cluster.
 Future work should include the development of a catch-up protocol for reintegrating nodes after outages or cluster membership changes,
-as can be seen in Dynamo~\cite{Dynamo2007} and its derivatives.
+as in Dynamo~\cite{Dynamo2007} and its derivatives.
 
 Similarly, table bandwidth parameters are currently static and cannot be reconfigured at runtime.
 A natural extension would involve dynamic reallocation of table bandwidth and key-space distribution,
 enabling live adjustment of throughput guarantees.
 Relaxing the uniform key-access assumption would further allow
-an internal auto-scaling mechanism akin to Dynamo’s partition-splitting strategy~\cite{Dynamo2007},
+an internal auto-scaling mechanism akin to Dynamo's partition-splitting strategy~\cite{Dynamo2007},
 implemented using the dynamic table API\@.
 
 While encryption is already supported by the underlying HTTP/2 server implementation,
@@ -44,8 +44,8 @@ Additional experimentation with HTTP/3~\cite{HTTP3} and QUIC~\cite{QUIC} could f
 Future work could also explore more sophisticated capacity management strategies across nodes,
 particularly when tables have unbalanced bandwidth or storage requirements.
 Enhancing the current bandwidth-limiting model to support separate limits for read and write operations
-could be beneficial, drawing inspiration from DynamoDB’s Read and Write Capacity Units (RCUs and WCUs)~\cite{Dynamo2022, DynamoWhitepaper}
-or X-Stor’s Request Units (RUs)~\cite{XStor}.
+could be beneficial, drawing inspiration from DynamoDB's Read and Write Capacity Units (RCUs and WCUs)~\cite{Dynamo2022, DynamoWhitepaper}
+or X-Stor's Request Units (RUs)~\cite{XStor}.
 
 Several additional features could be built atop the existing system as middleware layers:
 \begin{itemize}
@@ -57,11 +57,11 @@ Several additional features could be built atop the existing system as middlewar
 A parallel line of research, addressing similar concerns from a systems perspective, is that of CPU schedulers for real-time processes.
 As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
 the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
-Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto standard\footnote{
+Our implementation, through Rust's \texttt{tokio} runtime -- the de facto standard\footnote{
     \href{https://crates.io}{crates.io} reports over 416 million all-time downloads for \texttt{tokio},
     compared to approximately 70 million for the second most popular alternatives (\texttt{async-std} and its successor \texttt{smol}).
 } for asynchronous programming in Rust -- uses a multi-threaded work-stealing scheduler
 which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
-but provides no explicit latency control as some more advanced algorithm could.
-On the same topic, both the operating system IO and packet scheduler could and or should be enhanced by a similar approach,
-but undertaking a similar approach there would require a considerable effort.
+but provides no explicit latency control as some more advanced algorithms could.
+On the same topic, both the operating system IO and packet scheduler could and/or should be enhanced by a similar approach,
+but doing so would require a considerable effort.

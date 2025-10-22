@@ -64,7 +64,7 @@ that is locally \emph{prepared}, the node will refuse the advertisement as this
 might change the global state from \emph{unknown} to \emph{created}.
 
 Merkle trees~\cite{MerkleTree} are used to efficiently detect divergent tables,
-allowing the nodes to advertise these only.
+allowing the nodes to advertise only those.
 
 \subsubsection{Creation}
 \label{subsubsec:creation}
@@ -81,7 +81,7 @@ To create a table, the following steps are performed:
         cluster, skipping unavailable ones, requesting a bandwidth allocation
         for the new table, allocating up to $B$ on each availability zone.
         Each node can allocate as much bandwidth as it has available, up to the
-        requested amount, after performing the allocation, the node marks the
+        requested amount, after allocating, the node marks the
         table as locally \emph{prepared}.
     \item Once sufficient bandwidth is obtained (at least $S$), the router
         defines the list of responsible nodes and their respective bandwidths
@@ -92,10 +92,10 @@ To create a table, the following steps are performed:
     \item The router returns the \texttt{id} of the new table to the client.
 \end{enumerate}
 
-If all steps succeed the table is created successfully, in particular if the
-step~\ref{step:commit} succeeds, all the responsible nodes will have marked the
-table as locally \emph{created}, and thus the table will be considered globally
-\emph{created}.
+If all steps succeed, the table is created successfully.
+In particular if step~\ref{step:commit} succeeds, all the responsible nodes
+will have marked the table as locally \emph{created}, and thus the table will
+be considered globally \emph{created}.
 
 If any node fails to respond in step~\ref{step:commit}, the router will
 consider the table creation failed, and will return an error to the client.
