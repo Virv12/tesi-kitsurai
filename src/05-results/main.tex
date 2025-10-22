@@ -12,7 +12,7 @@ Experimental data were collected using three machines:
     \item Machine $H$: Intel Core i5-12450H (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at \SI{1.5}{\giga\hertz} and P-Cores at \SI{2}{\giga\hertz}), \SI{16}{\giga\byte} DDR4 RAM, \SI{512}{\giga\byte} NVMe 4xPCIe3 SSD, operating system Arch Linux, kernel \texttt{6.17.1}, file system \texttt{XFS}.
 \end{itemize}
 
-The machines were connected via a gigabit Ethernet network with a latency of about \SI{0.3}{\milli\second} while under stress.
+The machines were connected via a \SI{1}{\giga\bit} Ethernet network with a latency of about \SI{0.3}{\milli\second} while under stress.
 For these tests, we configured the system with a \SI{4}{\kilo\byte} max request size,
 a value chosen to avoid saturating the network connection in most tests,
 and which allowed us to measure the performance of CPU and disk.
@@ -22,7 +22,7 @@ We first recorded baseline values by having each machine stress itself in both \
 on a table with throttling disabled (i.e., \texttt{item-set} to sufficiently high limit) and value sizes of \SI{4}{\kilo\byte}.
 
 Table~\ref{tab:results-stress} presents the results, which allows us to rank the machine as follows: $2H \approx M \approx A$.
-\texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the gigabit connection.
+\texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the \SI{1}{\giga\bit} connection.
 
 The scalability and replication of the system were then evaluated.
 Unless stated otherwise, The following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
