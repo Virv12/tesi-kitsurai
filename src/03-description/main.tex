@@ -31,12 +31,13 @@ Section~\ref{subsec:availability-zones}).
 
 Each table has four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{bandwidth} or $B$: the number of requests, as
-        perceived by the client, that the system must guarantee for the table,
-        expressed in requests per second.
+    \item \texttt{bandwidth} or $B$: the number of requests, as perceived by
+        the client, that the system must guarantee for the table, expressed in
+        requests per second (see Section \ref{subsec:bandwidth-model}).
     \item $N$: the replication factor for each key-value pair.
-    \item \texttt{read\_concern} or $R$: the minimum number of nodes
-        that must successfully respond to a read request.
+    \item \texttt{read\_concern} or $R$: the minimum number of nodes that must
+        successfully respond to a read request (see Section
+        \ref{subsec:consistency}).
     \item \texttt{write\_concern} or $W$: the minimum number of nodes
         that must successfully respond to a write request.
 \end{itemize}
@@ -47,9 +48,9 @@ $B > 0$.
 Additionally, the system computes four parameters automatically:
 \begin{itemize}
     \item \texttt{id}: a UUID identifying the table, generated at creation.
-    \item \texttt{responsible\_nodes}: the list of nodes on which the table's
-        key-value pairs are distributed, chosen to guarantee replication and
-        data availability.
+    \item \texttt{responsible\_nodes}: the list of nodes, possibly
+        heterogeneous, on which the table's key-value pairs are distributed,
+        chosen to guarantee replication and data availability.
     \item $m$: the number of \texttt{responsible\_nodes}.
     \item $s_i$: the bandwidth allocated by node $i$ for the table.
     \item $S$: the total bandwidth allocated for the table, computed as $S =
@@ -68,7 +69,8 @@ client-tunable quorums. We make two deliberate design choices:
         \emph{no} catch-up to the latest value for restarting or recovering
         replicas.
         Replicas that miss a write may indefinitely retain a divergent value
-        until a later client write updates them.
+        until a later client write updates them (this is a limitation of the
+        current prototype).
     \item \textbf{Multi-value reads.}
         Reads may return multiple distinct versions of the same key.
         The store does not attempt to infer a single ``latest'' value, this is
@@ -91,58 +93,10 @@ payload written by any previously completed write.
 However, in the presence of concurrent or failed writes, multiple distinct
 payloads can appear in the read result, and the store offers no mechanism to
 determine which is the ``latest'' value.
-
-\subsection{Client API}
-\label{subsec:interface}
-
-The system exposes the public API through a REST interface over HTTP\@.
-Since every node maintains a copy of the metadata for all tables, the client
-can send requests to any node in the cluster, which acts as a \emph{router} to
-forward the request to the appropriate nodes.
-
-\subsubsection{\texttt{table-create}}
-\label{subsubsec:table-create}
-
-The client sends four parameters: $B$, $N$, $R$, and $W$.
-The system allocates enough bandwidth on the nodes to satisfy the requested
-parameters, creates the table, and returns the generated \texttt{id} of the new
-table.
-If it is not possible to satisfy the requested parameters, the operation fails
-and returns an error.
-
-\subsubsection{\texttt{table-delete}}
-\label{subsubsec:table-delete}
-
-The client sends the \texttt{id} of the table to be deleted.
-The system marks the table as deleted and frees the allocated resources.
-
-\subsubsection{\texttt{item-get}}
-\label{subsubsec:item-get}
-
-The client sends the \texttt{id} of the table and the \texttt{key} to be
-retrieved.
-The system forwards the request to the responsible nodes and waits for at least
-$R$ successful responses within a system-wide configurable timeout.
-If the operation succeeds, it returns a list of the values received from the
-nodes; otherwise, it returns an error with the successfully collected values.
-
-\subsubsection{\texttt{item-set}}
-\label{subsubsec:item-set}
-
-The client sends the \texttt{id} of the table, the \texttt{key}, and the
-\texttt{value} to be set.
-The system forwards the request to the responsible nodes and waits for at least
-$W$ successful responses within a system-wide configurable timeout.
-If the operation succeeds, it returns a success message; otherwise, it returns
-an error.
-
-\begin{figure}
-    \includegraphics[width=\columnwidth]{03-description/architecture}
-    \caption{\Kitsurai architecture overview. Clients can send requests to any
-        node, which routes them to the responsible nodes for the requested
-        table.}
-    \label{fig:architecture}
-\end{figure}
+This has to be handled at the application level (similarly to semantic
+reconciliation of Dynamo~\cite{Dynamo2007}), for example adding to the payload
+a version number or a time-stamp that allows the client to select the most
+recent value.
 
 \subsection{Availability Zones}
 \label{subsec:availability-zones}
@@ -213,3 +167,57 @@ Indeed, a rotational HDDs exhibit seek time and rotational latency that cause
 high variance and long-tail stalls, invalidating the constant-throughput
 abstraction required by the allocator; therefore, SSDs are required to provide
 sufficiently predictable performance for the guaranteed rates.
+
+\subsection{Client API}
+\label{subsec:interface}
+
+The system exposes the public API through a REST interface over HTTP\@.
+Since every node maintains a copy of the metadata for all tables, the client
+can send requests to any node in the cluster, which acts as a \emph{router} to
+forward the request to the appropriate nodes.
+
+\subsubsection{\texttt{table-create}}
+\label{subsubsec:table-create}
+
+The client provides four parameters: $B$, $N$, $R$, and $W$.
+The system allocates sufficient bandwidth across the nodes to satisfy the
+requested configuration, creates the table, and returns the generated
+\texttt{id} of the new table.
+If the requested parameters cannot be satisfied, for instance due to
+insufficient available bandwidth or an insufficient number of Availability
+Zones to meet the desired replication factor, the operation fails and an error
+is returned.
+
+\subsubsection{\texttt{table-delete}}
+\label{subsubsec:table-delete}
+
+The client sends the \texttt{id} of the table to be deleted.
+The system marks the table as deleted and frees the allocated resources.
+
+\subsubsection{\texttt{item-get}}
+\label{subsubsec:item-get}
+
+The client sends the \texttt{id} of the table and the \texttt{key} to be
+retrieved.
+The system forwards the request to the responsible nodes and waits for at least
+$R$ successful responses within a system-wide configurable timeout.
+If the operation succeeds, it returns a list of the values received from the
+nodes; otherwise, it returns an error with the successfully collected values.
+
+\subsubsection{\texttt{item-set}}
+\label{subsubsec:item-set}
+
+The client sends the \texttt{id} of the table, the \texttt{key}, and the
+\texttt{value} to be set.
+The system forwards the request to the responsible nodes and waits for at least
+$W$ successful responses within a system-wide configurable timeout.
+If the operation succeeds, it returns a success message; otherwise, it returns
+an error.
+
+\begin{figure}
+    \includegraphics[width=\columnwidth]{03-description/architecture}
+    \caption{\Kitsurai architecture overview. Clients can send requests to any
+        node, which routes them to the responsible nodes for the requested
+        table.}
+    \label{fig:architecture}
+\end{figure}
