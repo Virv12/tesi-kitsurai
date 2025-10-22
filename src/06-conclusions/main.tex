@@ -54,11 +54,6 @@ Several additional features could be built atop the existing system as middlewar
     \item User-friendly table naming, implemented as a metadata layer stored within the system itself.
 \end{itemize}
 
-% TODO: Ultimo par. del relwork: sembra out of context, almeno cosi';
-%        secondo me potrebbe venir rigirato come un'aggiunta al Future Work (in fondo, assieme alle Conclusioni, dopo le conclusioni),
-%        cioe' il fatto che in futuro si potrebbe provare a usare priorita' real-time (come fatto in RT-MongoDB),
-%        o persino SCHED_DEADLINE qualora il sistema riuscisse a tracciare quali sono le deadline entro cui le richieste vanno completate.
-%        Pero', dato che qui si parla di accesso al disco, puo' aver senso accennare a ioprio(_get/set()), cioe' lo scheduler del disco, prima di, o assieme a, quello della CPU (e lo scheduling dei pkt in rete?)
 A parallel line of research, addressing similar concerns from a systems perspective, is that of CPU schedulers for real-time processes.
 As developed by Lelli et al.~\cite{Deadline} for the Linux kernel with \texttt{SCHED\_DEADLINE},
 the Earliest Deadline First (EDF) algorithm provides explicit latency guarantees for scheduled tasks.
@@ -68,3 +63,5 @@ Our implementation, through Rust’s \texttt{tokio} runtime -- the de facto stan
 } for asynchronous programming in Rust -- uses a multi-threaded work-stealing scheduler
 which was proven to be efficient in expected time, space, and communication~\cite{WorkStealingScheduler},
 but provides no explicit latency control as some more advanced algorithm could.
+On the same topic, both the operating system IO and packet scheduler could and or should be enhanced by a similar approach,
+but undertaking a similar approach there would require a considerable effort.

@@ -3,13 +3,16 @@
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
 Amazon’s Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
-based on consistent hashing from~\cite{ConsistentHashing}, gossip-based membership,
-and Merkle-tree anti-entropy for repair. % TODO: Related Work: "merkle-tree anti-entropy" mi sembra abbia bisogno di una spiegazione rapida, soprattutto quando scrivete che ce l'ha anche \Kitsurai ?!?
+based on consistent hashing from~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
-Conflicting updates are detected through versioning and resolved at read time.
+Conflicting updates are detected through versioning and are resolved
+at read time either automatically by the system whenever possible (syntactic reconciliation),
+otherwise the user itself is made to choose a good version (semantic reconciliation).
+For readers seeking more detailed information, a comprehensive overview of consistency models
+can be found in the work of Bermbach et al.~\cite{ConsistencyOverview}.
 Cassandra~\cite{Cassandra} extends this design with tunable consistency levels and wide-column data modeling.
-As with Dynamo's sematic reconciliation, where the user is asked to pick the latest version on conflicts,
-Cassandra’s append-only write design results in more expensive reads, but enables significantly higher write throughput.
+As with Dynamo's sematic reconciliation, Cassandra’s append-only write design results in more expensive reads,
+but enables significantly higher write throughput.
 
 Amazon’s DynamoDB~\cite{Dynamo2022, DynamoWhitepaper} later introduced the notion of per-table bandwidth quotas,
 expressed as \textit{Read Capacity Units} (RCUs) and \textit{Write Capacity Units} (WCUs), used to limit client requests.
@@ -21,11 +24,7 @@ that encompasses all resource types -- CPU, memory, disk I/O, and network I/O --
 This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
 Unlike DynamoDB’s approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
 
-% TODO: Cucinotta: Likely cite Bigtable here (verificate se hanno qualche nota/commento nel paper su consistent/stable multi-tenant performance etc...)
-% Other distributed data stores, like Google's \textit{Bigtable}~\cite{Bigtable}, solve another issue?
-% Cioè fanno la stessa cosa che fanno Mongo o Cassandra
-
-Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip and Merkle-tree anti-entropy. % TODO: Stessa cosa di sopra.
+Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip-based metadata synchronization.
 It carries over DynamoDB's per-table bandwidth reservations, but introduces a creation-time admission control,
 allowing the system to refuse table creation when cluster resources cannot satisfy the requested guarantees.
 We manage to do this by re-using the same base ideas as in Karger et al.\ consistent hashing by using
@@ -33,8 +32,8 @@ a predictable distribution that allows for controlled access control.
 It is beyond the scope of this paper to address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
 Moreover, to further simplify the design and reduce the scope of this paper,
 our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user.
-Differently from Dynamo's reconciliation the system is not capable of any type of reconciliation
-and is completely the  
+Differently from Dynamo's reconciliation, our system is not capable of any type of reconciliation
+and offloads the consistency problem to the user, by returning all read values.
 
 Gupta et al.~\cite{FailureDetection} demonstrate that traditional heartbeat-based failure detectors fail to scale,
 and propose a randomized approach to overcome this limitation.
@@ -46,7 +45,6 @@ strategy -- similar in spirit to scalable failure detectors -- for the gossip di
 % MAYBE: CosmosDB potrebbe essere un'altro di cui parlare
 % MAYBE: Aerospike potrebbe essere un'altro di cui parlare
 % MAYBE: Couchbase potrebbe essere un'altro di cui parlare
-
 
 Another relevant research direction focuses on reducing tail latency in existing NoSQL data stores.
 Andreoli et al.~\cite{RTMongo, PriorityMongoDB}, propose per-request prioritization mechanisms

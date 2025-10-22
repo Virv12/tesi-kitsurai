@@ -16,7 +16,6 @@ making precise throughput control for each client essential.
 These constraints create a space of hard engineering and algorithmic problems -- from replication protocols to resource managers -- that must be solved jointly.
 Building practical, tenant-aware replicated stores thus requires cross-layer designs spanning networking, storage, and control planes.
 
-
 Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
 which guarantee response times below \SI{10}{\milli\second} for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}.
 However, providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
@@ -26,15 +25,16 @@ without guaranteeing precise limits on latency or throughput, especially when mu
 Due to the inability to isolate traffic from multiple tenants, solutions like these often deployed as separate instances per customer,
 thereby shifting resource-management and isolation responsibilities to the underlying cluster scheduler or provisioning layer.
 
-% TODO: Aggiungere nella intro oppure in fondo a relwork la discussione di qualche lavoro di David Bermbach su data store / data base
-%  \href{https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate}{https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate}
-%  Ad es., aggiungendo la notina nei discorsi introduttivi (o relwork discussion) riguardo a varie soluzioni che sono state pensate per time-series, come i columnar DB
+Even in major commercial NoSQL solutions, like Google's \textit{BigTable}~\cite{Bigtable},
+quota and throttling systems were only introduced later as useful feature and were not part of the original design.
+Its underlying storage \textit{GFS}~\cite{GFS} also does not make latency one of its main features,
+focusing instead on performance for higher throughput, and is also deployed in multiple cluster to support differentiated applications.
 
-% TODO: "Towards an Application-Centric Benchmark Suite for Spatiotemporal Database Systems", https://scholar.google.it/citations?view_op=view_citation&hl=en&user=dCCezIUAAAAJ&sortby=pubdate&citation_for_view=dCCezIUAAAAJ:uLbwQdceFCQC
-%  > Anche questo non ho capito come infilarlo in un discorso, fa tutta roba per PostGIS...
-% TODO: "Column-oriented database systems", https://scholar.google.it/citations?hl=en&user=dCCezIUAAAAJ&view_op=list_works&sortby=pubdate
-%  > In the context of time-series data stores, column-oriented systems provide a solution to... a different problem?
-
+The same fundamental performance problem has been tackled in columnar data stores,
+who provide faster access to individual columns than classic relational databases.
+Development in the last years has increased due to growing analytical workloads,
+and literature~\cite{ColumnarSurvey, ColumnOrientedDatabase} has intensified its focus on storage layouts,
+compression and execution techniques that exploit columnar layouts to minimize I/O and CPU overhead for selective and analytical queries.
 
 \paragraph{Paper Contributions}
 The \Kitsurai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,

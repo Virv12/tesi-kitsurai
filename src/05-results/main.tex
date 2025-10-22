@@ -1,6 +1,10 @@
 \section{Experimental Results}
 \label{sec:results}
 
+Literature on benchmarks for databases and data store is extensive
+and covers what measures to collect for various guarantee of consistency levels~\cite{ConsistencyOverview}.
+As our database has no consistency guarantees, we focus our experimentation on latency and scalability.
+
 Experimental data were collected using three machines:
 \begin{itemize}
     \item Machine $M$: MacBook Pro with M1 and \SI{32}{\giga\byte} RAM, built-in storage, operating system macOS~26, file system \texttt{APFS};
@@ -9,6 +13,9 @@ Experimental data were collected using three machines:
 \end{itemize}
 
 The machines were connected via a gigabit Ethernet network with a latency of about \SI{0.3}{\milli\second} while under stress.
+For these tests, we configured the system with a \SI{4}{\kilo\byte} max request size,
+a value chosen to avoid saturating the network connection in most tests,
+and which allowed us to measure the performance of CPU and disk.
 
 A purpose-built program (\texttt{ktb}) was developed to stress the system using multiple connections.
 We first recorded baseline values by having each machine stress itself in both \texttt{item-get} and \texttt{item-set} operations
@@ -17,7 +24,6 @@ on a table with throttling disabled (i.e., \texttt{item-set} to sufficiently hig
 Table~\ref{tab:results-stress} presents the results, which allows us to rank the machine as follows: $2H \approx M \approx A$.
 \texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the gigabit connection.
 
-% TODO: Bandwidth o altra parola?
 The scalability and replication of the system were then evaluated.
 Unless stated otherwise, The following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
 \texttt{item-get} operations were excluded because the operating system caches file reads, making their results unrepresentative of true random-access disk performance.
@@ -154,4 +160,3 @@ Overall, a slight increase in latency was observed, which is expected, as no exp
 % TODO: Una sezione che spiega due cose in più ci potrebbe stare, viene anche decentemente lunga.
 %\subsection{Key Distribution Error}
 %\label{subsec:key-distribution-error}
-

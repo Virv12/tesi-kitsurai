@@ -304,65 +304,81 @@
     keywords = {Large-Scale Distributed Storage}
 }
 
-maybe add to related work from here on out
+@inproceedings{GFS,
+    author = {Ghemawat, Sanjay and Gobioff, Howard and Leung, Shun-Tak},
+    title = {The Google file system},
+    year = {2003},
+    isbn = {1581137575},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/945445.945450},
+    doi = {10.1145/945445.945450},
+    booktitle = {Proceedings of the Nineteenth ACM Symposium on Operating Systems Principles},
+    pages = {29–43},
+    numpages = {15},
+    keywords = {scalability, fault tolerance, data storage, clustered storage},
+    location = {Bolton Landing, NY, USA},
+    series = {SOSP '03}
+}
 
-@inproceedings{PerfComp,
-    author = {Yuvraj Patel and Mohit Verma and Andrea C. Arpaci-Dusseau and Remzi H. Arpaci-Dusseau},
-    title = {Revisiting Concurrency in {High-Performance} {NoSQL} Databases},
-    booktitle = {10th USENIX Workshop on Hot Topics in Storage and File Systems (HotStorage 18)},
+@inproceedings{ConsistencyOverview,
+    author = {Bermbach, David and Kuhlenkamp, J{\"o}rn},
+    editor = {Gramoli, Vincent and Guerraoui, Rachid},
+    title = {Consistency in Distributed Storage Systems},
+    booktitle = {Networked Systems},
+    year = {2013},
+    publisher = {Springer Berlin Heidelberg},
+    address = {Berlin, Heidelberg},
+    pages = {175--189},
+    abstract = {Due to the advent of eventually consistent storage systems, consistency has become a focus of research. Still, a clear overview of consistency in distributed systems is missing. In this work, we define and describe consistency, show how different consistency models and perspectives are related and briefly discuss how concrete consistency guarantees of a distributed storage system can be measured.},
+    isbn = {978-3-642-40148-0}
+}
+
+@inproceedings{BenchmarkConsistencyS3,
+    author = {Bermbach, David and Tai, Stefan},
+    title = {Eventual consistency: How soon is eventual? An evaluation of Amazon S3's consistency behavior},
+    year = {2011},
+    isbn = {9781450310673},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/2093185.2093186},
+    doi = {10.1145/2093185.2093186},
+    abstract = {Over the last few years, Cloud storage systems and so-called NoSQL datastores have found widespread adoption. In contrast to traditional databases, these storage systems typically sacrifice consistency in favor of latency and availability as mandated by the CAP theorem, so that they only guarantee eventual consistency. Existing approaches to benchmark these storage systems typically omit the consistency dimension or did not investigate eventuality of consistency guarantees. In this work we present a novel approach to benchmark staleness in distributed datastores and use the approach to evaluate Amazon's Simple Storage Service (S3). We report on our unexpected findings.},
+    booktitle = {Proceedings of the 6th Workshop on Middleware for Service Oriented Computing},
+    articleno = {1},
+    numpages = {6},
+    keywords = {Amazon S3, cloud computing, eventual consistency},
+    location = {Lisbon, Portugal},
+    series = {MW4SOC '11}
+}
+
+@inproceedings{ColumnarSurvey,
+    author = {Ordonez, Carlos and Bellatreche, Ladjel},
+    editor = {Elloumi, Mourad and Granitzer, Michael and Hameurlain, Abdelkader and Seifert, Christin and Stein, Benno and Tjoa, A Min and Wagner, Roland},
+    title = {A Survey on Parallel Database Systems from a Storage Perspective: Rows Versus Columns},
+    booktitle = {Database and Expert Systems Applications},
     year = {2018},
-    address = {Boston, MA},
-    url = {https://www.usenix.org/conference/hotstorage18/presentation/patel},
-    publisher = {USENIX Association},
-    month = jul
+    publisher = {Springer International Publishing},
+    address = {Cham},
+    pages = {5--20},
+    abstract = {Big data requirements have revolutionized database technology, bringing many innovative and revamped DBMSs to process transactional (OLTP) or demanding query workloads (cubes, exploration, pre-processing). Parallel and main memory processing have become important features to exploit new hardware and cope with data volume. With such landscape in mind, we present a survey comparing modern row and columnar DBMSs, contrasting their ability to write data (storage mechanisms, transaction processing, batch loading, enforcing ACID) and their ability to read data (query processing, physical operators, sequential vs parallel). We provide a unifying view of alternative storage mechanisms, database algorithms and query optimizations used across diverse DBMSs. We contrast the architecture and processing of a parallel DBMS with an HPC system. We cover the full spectrum of subsystems going from storage to query processing. We consider parallel processing and the impact of much larger RAM, which brings back main-memory databases. We then discuss important parallel aspects including speedup, sequential bottlenecks, data redistribution, high speed networks, main memory processing with larger RAM and fault-tolerance at query processing time. We outline an agenda for future research.},
+    isbn = {978-3-319-99133-7}
 }
 
-@inproceedings{MicroFuge,
-    author = {Singh, Akshay K. and Cui, Xu and Cassell, Benjamin and Wong, Bernard and Daudjee, Khuzaima},
-    booktitle = {2014 IEEE 34th International Conference on Distributed Computing Systems},
-    title = {MicroFuge: A Middleware Approach to Providing Performance Isolation in Cloud Storage Systems},
-    year = {2014},
-    volume = {},
-    number = {},
-    pages = {503-513},
-    keywords = {Servers;Cloud computing;Load modeling;Admission control;Time factors;Resource management;caching;middleware;performance isolation;storage;scheduling},
-    doi = {10.1109/ICDCS.2014.58}
-}
-
-@inproceedings{mClock,
-    author = {Gulati, Ajay and Merchant, Arif and Varman, Peter J.},
-    title = {mClock: handling throughput variability for hypervisor IO scheduling},
-    year = {2010},
-    publisher = {USENIX Association},
-    address = {USA},
-    abstract = {Virtualized servers run a diverse set of virtual machines (VMs), ranging from interactive desktops to test and development environments and even batch workloads. Hypervisors are responsible for multiplexing the underlying hardware resources among VMs while providing them the desired degree of isolation using resource management controls. Existing methods provide many knobs for allocating CPU and memory to VMs, but support for control of IO resource allocation has been quite limited. IO resource management in a hypervisor introduces significant new challenges and needs more extensive controls than in commodity operating systems.This paper introduces a novel algorithm for IO resource allocation in a hypervisor. Our algorithm, mClock, supports proportional-share fairness subject to minimum reservations and maximum limits on the IO allocations for VMs. We present the design of mClock and a prototype implementation inside the VMware ESX server hypervisor. Our results indicate that these rich QoS controls are quite effective in isolating VM performance and providing better application latency. We also show an adaptation of mClock (called dmClock) for a distributed storage environment, where storage is jointly provided by multiple nodes.},
-    booktitle = {Proceedings of the 9th USENIX Conference on Operating Systems Design and Implementation},
-    pages = {437–450},
-    numpages = {14},
-    location = {Vancouver, BC, Canada},
-    series = {OSDI'10}
-}
-
-@inproceedings{AnnaBellaDB,
-    author = {Szalay, Mark and Matray, Peter and Toka, Laszlo},
-    booktitle = {2020 16th International Conference on Network and Service Management (CNSM)},
-    title = {AnnaBellaDB: Key-Value Store Made Cloud Native},
-    year = {2020},
-    volume = {},
-    number = {},
-    pages = {1-5},
-    keywords = {Servers;Noise measurement;Monitoring;Routing;Cloud computing;Delays;Distributed databases},
-    doi = {10.23919/CNSM50824.2020.9269045}
-}
-
-@inproceedings{AQUAS,
-    author = {Xu, Chen and Xia, Fan and Sharaf, Mohamed A. and Zhou, Minqi and Zhou, Aoying},
-    booktitle = {2014 IEEE 30th International Conference on Data Engineering},
-    title = {AQUAS: A quality-aware scheduler for NoSQL data stores},
-    year = {2014},
-    volume = {},
-    number = {},
-    pages = {1210-1213},
-    keywords = {Quality of service;Scheduling;Prototypes;Delays;Estimation;Generators;Educational institutions},
-    doi = {10.1109/ICDE.2014.6816743}
+@article{ColumnOrientedDatabase,
+    author = {Abadi, Daniel J. and Boncz, Peter A. and Harizopoulos, Stavros},
+    title = {Column-oriented database systems},
+    year = {2009},
+    issue_date = {August 2009},
+    publisher = {VLDB Endowment},
+    volume = {2},
+    number = {2},
+    issn = {2150-8097},
+    url = {https://doi.org/10.14778/1687553.1687625},
+    doi = {10.14778/1687553.1687625},
+    abstract = {Column-oriented database systems (column-stores) have attracted a lot of attention in the past few years. Column-stores, in a nutshell, store each database table column separately, with attribute values belonging to the same column stored contiguously, compressed, and densely packed, as opposed to traditional database systems that store entire records (rows) one after the other. Reading a subset of a table's columns becomes faster, at the potential expense of excessive disk-head seeking from column to column for scattered reads or updates. After several dozens of research papers and at least a dozen of new column-store start-ups, several questions remain. Are these a new breed of systems or simply old wine in new bottles? How easily can a major row-based system achieve column-store performance? Are column-stores the answer to effortlessly support large-scale data-intensive applications? What are the new, exciting system research problems to tackle? What are the new applications that can be potentially enabled by column-stores? In this tutorial, we present an overview of column-oriented database system technology and address these and other related questions.},
+    journal = {Proc. VLDB Endow.},
+    month = aug,
+    pages = {1664–1665},
+    numpages = {2}
 }
