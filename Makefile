@@ -13,6 +13,9 @@ all: $(PDFS)
 %.pdf: %.typ
 	typst compile $<
 
+ascii:
+	find src -name '*.tex' -or -name '*.typ' | xargs grep --color --perl-regexp --line-number '[^\x00-\x7F]' || true
+
 clean:
 	rm -rf out
 	find src -name '*.pdf' -delete
