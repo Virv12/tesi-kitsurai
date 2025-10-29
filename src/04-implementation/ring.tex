@@ -5,8 +5,7 @@ To ensure availability, each key needs to be replicated across multiple nodes
 while satisfying the following requirements:
 
 \begin{enumerate}
-    \item Each key is replicated on $N$ nodes, each from a distinct
-        availability zone.
+    \item Each key is replicated on $N$ nodes, each from a distinct AZ.
     \item $\mathbb{E}[w_i] \leq s_i$ for each node $i$, where $w_i$ is the
         workload on node $i$ and $s_i$ is the bandwidth allocated by that node
         for the table, both measured in requests per second.
@@ -17,10 +16,9 @@ p_k \cdot B$ where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
 probability that key $k$ is requested and $B$ is the total bandwidth of the
 table, in requests per second.
 
-An adverse distribution of keys in requests would make it impossible to scale
-the table on multiple nodes, for example if node $i$ is assigned a key $k$ such
-that $p_k = 1$ we get that $\mathbb{E}[w_i] = B \leq s_i$, requiring that node
-$i$ is able to handle the entire table workload.
+An extreme request distribution prevents scaling: if some key $k$ has $p_k = 1$
+and is placed on node $i$, then $\mathbb[w_i] = B$, which would require
+$s_i \geq B$, i.e., node $i$ must handle the entire table’s workload.
 To avoid this problem, we assume that keys are uniformly distributed, i.e.,
 $p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is the set of
 keys in the table.
@@ -29,17 +27,16 @@ Under this assumption, the expected workload on node $i$ is
 $\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$, so we can rewrite the second
 requirement as $\frac{|K_i|}{|K|} \leq \frac{s_i}{B}$.
 
-Since we don't want to waste resources, we are going to strengthen the
-requirement and enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
+Since we don't want to waste resources, we strengthen the requirement and
+enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
 Summing over all nodes from the same AZ $z$, we get $\sum_{i :
 \mathrm{az}(i) = z} \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z}
 \frac{s_i}{B}$, since each key is assigned to at most one node from the same
-availability zone, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$,
-hence $\sum_{i : \mathrm{az}(i) = z} s_i \leq B$, and $s_i \leq B$ for each
-node $i$.
+AZ, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
+$\sum_{i : \mathrm{az}(i) = z} s_i \leq B$, and $s_i \leq B$ for each node $i$.
 
-Let's define $S = \sum s_i$, the total bandwidth allocated for the table across
-all nodes.
+Define $S = \sum s_i$, the total bandwidth allocated for the table across all
+nodes.
 By summing the second requirement over all nodes, we obtain $\frac{1}{|K|} \sum
 |K_i| = \frac{S}{B}$.
 Since each key is assigned to exactly $N$ nodes, we have $\sum |K_i| = N
@@ -53,7 +50,7 @@ each position in the ring we assign a node $i$ such that:
 
 \begin{enumerate}
     \item Every consecutive interval of length $N$ in the ring contains
-        distinct nodes with different availability zones.
+        distinct nodes with different AZs.
     \item Each node $i$ occupies exactly $s_i$ positions in the ring.
 \end{enumerate}
 
@@ -65,8 +62,7 @@ computed position, i.e., to the nodes at positions $p, p + 1, \dots, p + N - 1$
 (wrapping around the ring if necessary).
 
 Since each interval of length $N$ contains distinct nodes, each key is assigned
-to $N$ nodes with different availability zones, satisfying the first
-requirement.
+to $N$ nodes with different AZs, satisfying the first requirement.
 Furthermore, the probability that a key is assigned to position $p$ in the ring
 is $\frac{N}{S} = \frac{1}{B}$, so the expected number of keys assigned to the
 position is $|K| \cdot \frac{1}{B}$.
@@ -129,7 +125,7 @@ def build_ring(table):
   positions = []
   for x in range(table.N):
     for y in range(table.B):
-      position.append(x + y * table.N)
+      positions.append(x + y * table.N)
 
   # Nodes order
   nodes = table.nodes
@@ -207,8 +203,8 @@ Thus the ring is:
 Every window of length $N = 3$ contains nodes from distinct AZs, and each node
 $i$ occupies exactly $s_i$ positions.
 To place a key $k$, compute the starting position $p = \text{hash}(k) \bmod S$
-and select nodes $r_p, r_{p+1}, \dots, r_{p+N-1}$ (with wrap-around), e.g., if
-$p = 2$ then the key is assigned to nodes $2$, $0$, and $1$
+and select nodes $r_p, r_{p+1}, \dots, r_{p+N-1}$ (indices modulo $S$), e.g.,
+if $p = 2$ then the key is assigned to nodes $2$, $0$, and $1$
 (Figure~\ref{fig:ring-example}).
 
 \begin{figure}
@@ -270,8 +266,7 @@ In this case the algorithm runs in $O(\log M)$ time and uses $O(M)$ memory.
 
 \paragraph{Example}
 Let's apply the implicit construction to the example in the previous section.
-We start by computing the prefix sums $c_i = \sum_{j=0}^{i-1}
-s_i$, obtaining
+We start by computing the prefix sums $c_i = \sum_{j=0}^{i-1} s_j$, obtaining
 \[
     \begin{array}{c|cccccc}
         i   & 0 & 1 & 2 & 3 &  4 &  5 \\ \hline

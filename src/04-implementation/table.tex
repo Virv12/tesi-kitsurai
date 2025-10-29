@@ -79,7 +79,7 @@ To create a table, the following steps are performed:
         effective bandwidth $S = B \cdot N$ to account for replication.
     \item\label{step:prepare} The router iterates over the nodes in the
         cluster, skipping unavailable ones, requesting a bandwidth allocation
-        for the new table, allocating up to $B$ on each availability zone.
+        for the new table, allocating up to $B$ on each AZ.
         Each node can allocate as much bandwidth as it has available, up to the
         requested amount, after allocating, the node marks the
         table as locally \emph{prepared}.
