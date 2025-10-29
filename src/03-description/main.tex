@@ -1,17 +1,6 @@
 \section{Description}
 \label{sec:architecture}
 
-%# Descrizione
-%> Copiando da un paper di Cucinotta, qui descriverei solo il modello di cluster 
-%    e l'API di ogni nodo sia per i client che per nodi.
-%
-%**No coordinazione.**
-%Altre varie assunzioni:
-%- Modello di cluster (possono esplodere per tempo finito).
-%- Modello di banda.
-%- No Consistenza: si fa con un layer aggiuntivo
-%- API client + tabelle senza nome
-
 Rustikai stores users' data in a set of \emph{tables}, each identified by a
 UUID~\cite{rfc9562}.
 Every table contains key-value pairs, where both keys and values are
@@ -49,7 +38,7 @@ Additionally, the system computes five parameters automatically:
     \item \texttt{responsible\_nodes}: the list of nodes, possibly
         heterogeneous, on which the table's key-value pairs are distributed,
         chosen to guarantee replication and data availability.
-    \item $m$: the number of \texttt{responsible\_nodes}.
+    \item $M$: the number of \texttt{responsible\_nodes}.
     \item $s_i$: the bandwidth allocated by node $i$ for the table.
     \item $S$: the total bandwidth allocated for the table, computed as $S =
         \sum s_i$ or equivalently $S = B \cdot N$.
@@ -67,8 +56,8 @@ client-tunable quorums. We make two deliberate design choices:
         \emph{no} catch-up to the latest value for restarting or recovering
         replicas.
         Replicas that miss a write may indefinitely retain a divergent value
-        until a later client write updates them (this is a limitation of the
-        current prototype).
+        until a later client write updates them (this is known a limitation of
+        the current prototype).
     \item \textbf{Multi-value reads.}
         Reads may return multiple distinct versions of the same key.
         The store does not attempt to infer a single ``latest'' value, this is
@@ -159,11 +148,11 @@ payloads of maximum size and then used by the allocator as that node's
 budget.
 
 However, to ensure the validity of this model, storage devices must be
-solid-state drives.
-Indeed, rotational HDDs exhibit seek time and rotational latency that cause
-high variance and long-tail stalls, invalidating the constant-throughput
-abstraction required by the allocator; therefore, SSDs are required to provide
-sufficiently predictable performance for the guaranteed rates.
+solid-state drives (SSDs) in order to provide sufficiently predictable
+performance for the guaranteed rates.
+Rotational HDDs are not a viable option due to their seek time and rotational
+latency which cause high variance and long-tail stalls, invalidating the
+constant-throughput abstraction required by the allocator.
 
 \subsection{Client API}
 \label{subsec:interface}
@@ -173,44 +162,40 @@ Since every node maintains a copy of the metadata for all tables, the client
 can send requests to any node in the cluster, which acts as a \emph{router} to
 forward the request to the appropriate nodes.
 
-\subsubsection{\texttt{table-create}}
-\label{subsubsec:table-create}
+\begin{itemize}
+    \item \textbf{\texttt{table-create}}: The client provides four parameters:
+        $B$, $N$, $R$, and $W$.
+        The system allocates sufficient bandwidth across the nodes to satisfy
+        the requested configuration, creates the table, and returns the
+        generated \texttt{id} of the new table.
+        If the requested parameters cannot be satisfied, for instance due to
+        insufficient available bandwidth or an insufficient number of AZs to
+        meet the desired replication factor, the operation fails and an error
+        is returned.
 
-The client provides four parameters: $B$, $N$, $R$, and $W$.
-The system allocates sufficient bandwidth across the nodes to satisfy the
-requested configuration, creates the table, and returns the generated
-\texttt{id} of the new table.
-If the requested parameters cannot be satisfied, for instance due to
-insufficient available bandwidth or an insufficient number of Availability
-Zones to meet the desired replication factor, the operation fails and an error
-is returned.
+    \item \textbf{\texttt{table-delete}}: The client sends the \texttt{id} of
+        the table to be deleted.
+        The system marks the table as deleted and frees the allocated
+        resources.
 
-\subsubsection{\texttt{table-delete}}
-\label{subsubsec:table-delete}
+    \item \textbf{\texttt{item-get}}: The client sends the \texttt{id} of the
+        table and the \texttt{key} to be retrieved.
+        The system forwards the request to the responsible nodes and waits for
+        at least $R$ successful responses within a system-wide configurable
+        timeout.
+        If the operation succeeds, it returns a list of the values received
+        from the nodes; otherwise, it returns an error and includes any values
+        successfully collected.
 
-The client sends the \texttt{id} of the table to be deleted.
-The system marks the table as deleted and frees the allocated resources.
+    \item \textbf{\texttt{item-set}}: The client sends the \texttt{id} of the
+        table, the \texttt{key}, and the \texttt{value} to be set.
+        The system forwards the request to the responsible nodes and waits for
+        at least $W$ successful responses within a system-wide configurable
+        timeout.
+        If the operation succeeds, it returns a success message; otherwise, it
+        returns an error.
 
-\subsubsection{\texttt{item-get}}
-\label{subsubsec:item-get}
-
-The client sends the \texttt{id} of the table and the \texttt{key} to be
-retrieved.
-The system forwards the request to the responsible nodes and waits for at least
-$R$ successful responses within a system-wide configurable timeout.
-If the operation succeeds, it returns a list of the values received from the
-nodes; otherwise, it returns an error and includes any values successfully
-collected.
-
-\subsubsection{\texttt{item-set}}
-\label{subsubsec:item-set}
-
-The client sends the \texttt{id} of the table, the \texttt{key}, and the
-\texttt{value} to be set.
-The system forwards the request to the responsible nodes and waits for at least
-$W$ successful responses within a system-wide configurable timeout.
-If the operation succeeds, it returns a success message; otherwise, it returns
-an error.
+\end{itemize}
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{03-description/architecture}

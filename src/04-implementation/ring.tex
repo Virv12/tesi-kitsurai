@@ -26,39 +26,17 @@ $p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is the set of
 keys in the table.
 
 Under this assumption, the expected workload on node $i$ is
-$\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$ so we can rewrite the second
+$\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$, so we can rewrite the second
 requirement as $\frac{|K_i|}{|K|} \leq \frac{s_i}{B}$.
 
 Since we don't want to waste resources, we are going to strengthen the
 requirement and enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
-Summing over all nodes from the same availability zone $z$, we get $\sum_{i :
+Summing over all nodes from the same AZ $z$, we get $\sum_{i :
 \mathrm{az}(i) = z} \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z}
 \frac{s_i}{B}$, since each key is assigned to at most one node from the same
 availability zone, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$,
 hence $\sum_{i : \mathrm{az}(i) = z} s_i \leq B$, and $s_i \leq B$ for each
 node $i$.
-
-%\begin{equation}
-%\label{eq:total-bandwidth}
-%S = B \cdot N
-%\end{equation}
-
-%\begin{lemma}[AZ feasibility]
-%    \label{lem:az-feasibility}
-%    Under the two requirements above, for each availability zone $z$ the
-%    following condition must hold:
-%    \[
-%        \sum_{i : \mathrm{az}(i) = z} s_i \leq b
-%    \]
-%\end{lemma}
-%\begin{proof}
-%    Summing the second requirement over all nodes from the same availability
-%    zone $z$, we get $\sum_{i : \mathrm{az}(i) = z}
-%    \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z} \frac{s_i}{B}$. Since
-%    each key is assigned to at most one node from the same availability zone,
-%    we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
-%    $\sum_{i : \mathrm{az}(i) = z} s_i \leq b$.
-%\end{proof}
 
 Let's define $S = \sum s_i$, the total bandwidth allocated for the table across
 all nodes.
@@ -100,28 +78,45 @@ requirement.
 \subsubsection{Explicit construction}
 \label{subsubsec:explicit-construction}
 
-First we are going to order the nodes, we will sort them such that nodes from
-the same availability zone are grouped together and such that availability
-zones $z$ with $\sum_{i : \mathrm{az}(i) = z} s_i = B$ are at the beginning of
-the order.
+For each AZ $z$, define
+\[
+    S_z = \sum_{i : \mathrm{az}(i) = z} s_i
+\]
+An AZ $z$ is \emph{saturated} if $S_z = B$.
 
-Then nodes are assigned to the ring iteratively in the order defined above.
-Each node is assigned to $s_i$ positions, proceeding from the last assigned
-position to the previous node (or from an arbitrary position for the first
-node) and occupying one position every $N$.
-If that position is already taken by another node, we skip to the next; it is
-guaranteed that it will never be necessary to skip two consecutive positions.
+\paragraph{Node order.}
+We order nodes by first grouping them by AZ and placing all saturated AZs
+before the others (the relative order of groups with the same predicate is
+arbitrary).
+Within each group, nodes appear in any fixed order.
 
-Since each availability zone $z$ has bandwidth $\sum_{i : \mathrm{az}(i) = z}
-s_i \leq B$, and the ring has size $S = B \cdot N$, it is guaranteed that the
-nodes from the same availability zone $z$ are assigned to $\sum_{i :
-\mathrm{az}(i) = z} s_i$ positions without completing a full cycle of the ring,
-so all positions occupied by nodes of the same availability zone are at least
-$N$ positions apart.
-Therefore, this construction satisfies the properties described above for the
-\emph{replication ring}.
+\paragraph{Position order.}
+We enumerate ring positions $0,\dots,S-1$ by residue classes modulo $N$: first
+all multiples of $N$ in increasing order, then all positions congruent to
+$1\bmod N$, and so on up to $N{-}1$.
 
-\noindent In pseudocode, the construction of the ring can be represented as in Listing~\ref{lst:explicit-ring}.
+\paragraph{Assignment.}
+Traverse the nodes in the \emph{Node order} and, for each node assign it to
+$s_i$ consecutive slots of the \emph{Position order}.
+
+\paragraph{Correctness.}
+Because nodes from the same AZ are consecutive in the \emph{Node order}, the
+$S_z$ slots of AZ $z$ occupy a contiguous run in the \emph{Position order}.
+Since each residue class contributes exactly $B$ positions and $S_z \le B$,
+that run spans at most two adjacent residue classes.
+Any two positions within the same residue class differ by a multiple of $N$.
+If the run crosses a class boundary, the last position of class $r$ and the
+first of class $r + 1$ are separated on the ring by $N + 1$ steps.
+Since $S_z \le B$, the run cannot complete a full circle and wrap around to the
+first position of class $r$; saturated AZs are an exception as they complete
+one full circle, but all their positions belong to the same residue class
+because they are placed first in the \emph{Node order}.
+Hence, any two positions belonging to the same AZ are at distance at least $N$,
+so every window of $N$ consecutive positions contains at most one position from
+any AZ.
+
+The construction can be expressed in pseudocode as follows in
+Listing~\ref{lst:explicit-ring}.
 
 \begin{lstlisting}[
     language=Python,
@@ -130,72 +125,78 @@ Therefore, this construction satisfies the properties described above for the
     label={lst:explicit-ring}
 ]
 def build_ring(table):
-  S = table.B * table.N
-  ring = [None] * S
-  curr_pos = 0
+  # Positions order
+  positions = []
+  for x in range(table.N):
+    for y in range(table.B):
+      position.append(x + y * table.N)
 
-  # Assume nodes are already sorted
-  for i in range(table.m):
-    for _ in range(table.s[i]):
-      if ring[curr_pos] is not None:
-        curr_pos = (curr_pos + 1) % S
-      assert ring[curr_pos] is None
-      ring[curr_pos] = i
-      curr_pos = (curr_pos + table.N) % S
+  # Nodes order
+  nodes = table.nodes
+  # Sort nodes to define the Node order:
+  #   (1) saturated AZs first,
+  #   (2) then by AZ identifier,
+  #   (3) then by node identifier.
+  nodes.sort(key=node_comparator)
+
+  # Assignment
+  ring = [None] * table.S
+  idx = 0
+  for node in nodes:
+    for _ in range(table.s[node]):
+      ring[positions[idx]] = node
+      idx += 1
 
   return ring
 \end{lstlisting}
 
-This construction requires $O(S)$ time and space.
+This procedure runs in $O(S)$ time and uses $O(S)$ space.
 
 \paragraph{Example}
-Let's see an example of ring construction for a table with parameters:
+Consider a table with parameters
 \[
     N = 3,\quad
     B = 4,\quad
     S = B \cdot N = 12,
 \]
-and five nodes all from distinct availability zones with bandwidth allocated
-for the table:
+and five nodes, each in a distinct AZ ($az(i) = i$), with allocated bandwidth
 \[
     s_0 = 4,\; s_1 = 3,\; s_2 = 2,\; s_3 = 1,\; s_4 = 2.
 \]
+Since $S_{az(0)} = s_0 = 4 = B$, the AZ of node $0$ is saturated; all other AZs are non-saturated.
 
-We start with a circular array $r_0, r_1, \dots, r_{11}$ of length $S = 12$.
-Each node $i$ is assigned to $s_i$ positions, jumping $N = 3$ slots from the
-last assigned position.
+First we compute the \emph{Node order}.
+Node $0$ takes the first position since its AZ is the only saturated one.
+The remaining nodes are ordered by their AZ, so the order is:
+\[
+    \langle 0,\,1,\,2,\,3,\,4 \rangle.
+\]
 
-\begin{itemize}
-    \item Node $0$ is assigned to $s_0 = 4$ positions: $r_0$, $r_{0+3} = r_3$,
-        $r_{3+3} = r_6$, and $r_{6+3} = r_9$.
-    \item Node $1$ is assigned to $s_1 = 3$ positions: $r_{9+3} = r_{0}$ is
-        already taken, so we skip to $r_1$, then $r_{1+3} = r_4$, and
-        $r_{4+3} = r_7$.
-    \item Node $2$ is assigned to $s_2 = 2$ positions: $r_{7+3} = r_{10}$ and
-        $r_{10+3} = r_1$ is already taken, so we skip to $r_2$.
-    \item Node $3$ is assigned to $s_3 = 1$ position: $r_{2+3} = r_5$.
-    \item Node $4$ is assigned to $s_4 = 2$ positions: $r_{5+3} = r_8$ and
-        $r_{8+3} = r_{11}$.
-\end{itemize}
+Now we compute the \emph{Position order}.
+We list all positions for each residue class modulo $N$:
+\[
+    \begin{aligned}
+        &\text{class }0: &&\langle 0,3,6,9 \rangle \\
+        &\text{class }1: &&\langle 1,4,7,10 \rangle \\
+        &\text{class }2: &&\langle 2,5,8,11 \rangle \\
+    \end{aligned}
+\]
+Combining them we obtain:
+\[
+    P \;=\; \langle 0,3,6,9,\; 1,4,7,10,\; 2,5,8,11\rangle.
+\]
 
-%\[
-%    \begin{array}{rl}
-%        \text{Node }0\;(s_0=4): & r_{0\phantom{0}} = 0 \\
-%                                & r_{3\phantom{0}} = 0 \\
-%                                & r_{6\phantom{0}} = 0 \\
-%                                & r_{9\phantom{0}} = 0 \\[0.5ex]
-%        \text{Node }1\;(s_1=3): & r_{1\phantom{0}} = 1 \\
-%                                & r_{4\phantom{0}} = 1 \\
-%                                & r_{7\phantom{0}} = 1 \\[0.5ex]
-%        \text{Node }2\;(s_2=2): & r_{10} = 2 \\
-%                                & r_{2\phantom{0}} = 2 \\[0.5ex]
-%        \text{Node }3\;(s_3=1): & r_{5\phantom{0}} = 3 \\[0.5ex]
-%        \text{Node }4\;(s_4=2): & r_{8\phantom{0}} = 4 \\
-%                                & r_{11} = 4
-%    \end{array}
-%\]
-
-Finally, we obtain:
+Finally, we assign each node $i$ to $s_i$ consecutive positions from $P$:
+\[
+    \begin{aligned}
+        &\text{node }0:\; P[0..3]  &&= \langle 0,3,6,9\rangle \\
+        &\text{node }1:\; P[4..6]  &&= \langle 1,4,7\rangle \\
+        &\text{node }2:\; P[7..8]  &&= \langle 10,2\rangle \\
+        &\text{node }3:\; P[9..9]  &&= \langle 5\rangle \\
+        &\text{node }4:\; P[10..11]&&= \langle 8,11\rangle \\
+    \end{aligned}
+\]
+Thus the ring is:
 \[
     \begin{array}{c|cccccccccccc}
         p   & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\ \hline
@@ -203,13 +204,12 @@ Finally, we obtain:
     \end{array}
 \]
 
-It is easy to verify that every window of length $N = 3$ contains distinct
-nodes and that each node $i$ occupies exactly $s_i$ positions.
-
-To find the nodes assigned to a key $k$, we compute its starting position
-$p = \text{hash}(k) \bmod S$.
-Let's say that $p = 2$, then the key is assigned to nodes $r_2 = 2$, $r_3 = 0$,
-and $r_4 = 1$ (see Figure~\ref{fig:ring-example}).
+Every window of length $N = 3$ contains nodes from distinct AZs, and each node
+$i$ occupies exactly $s_i$ positions.
+To place a key $k$, compute the starting position $p = \text{hash}(k) \bmod S$
+and select nodes $r_p, r_{p+1}, \dots, r_{p+N-1}$ (with wrap-around), e.g., if
+$p = 2$ then the key is assigned to nodes $2$, $0$, and $1$
+(Figure~\ref{fig:ring-example}).
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{04-implementation/ring-example}
@@ -225,15 +225,20 @@ Since the allocated bandwidth can be considerably high, constructing the ring
 explicitly may be very expensive.
 To avoid this, we look for an algorithm that directly computes the node
 assigned to a position $p$ in the ring.
-Let $o_p$ be the iteration at which the $p$-th position is assigned.
-We observe that the explicit construction assigns nodes in the following order:
-first the multiples of $N$ in increasing order, then the numbers congruent to
-$1$ modulo $N$ in increasing order, then the numbers congruent to $2$ modulo
-$N$, and so on up to $N-1$.
-It follows that $o_p = \left\lfloor \frac{p}{N} \right\rfloor + (p \bmod N)
-\cdot N$.
+
+Let $o_p$ be the position of $p$ in the \emph{Position order}.
+We find which residue class $p$ belongs to by computing $p \bmod N$; the index
+within that class is given by $\left\lfloor \frac{p}{N} \right\rfloor$.
+The value $p$ appears after all elements of previous classes, each containing
+$B$ elements, and after $\left\lfloor \frac{p}{N} \right\rfloor$ elements of
+its own class.
+Hence, the index of $p$ in the \emph{Position order} is
+\[
+    o_p = \Bigl\lfloor \frac{p}{N} \Bigr\rfloor + (p \bmod N) \cdot B.
+\]
 Now we need to find the $o_p$-th assigned node, i.e., the node $i$ such that
-$\sum_{j=0}^{i-1} s_j \leq o_p < \sum_{j=0}^{i} s_j$.
+$\sum_{j=0}^{i-1} s_j \leq o_p < \sum_{j=0}^{i} s_j$, this is the node assigned
+to position $p$ in the ring.
 
 In pseudocode, the algorithm to find the node assigned to a position $p$ in the
 ring can be represented as in Listing~\ref{lst:implicit-ring}.
@@ -250,18 +255,18 @@ def get_node_at_position(table, p):
     o_p = floor(p / N) + (p % N) * B
 
     acc = 0
-    for node in range(table.m):
+    for node in range(table.nodes):
         acc += table.s[node]
         if acc > o_p:
             return node
 \end{lstlisting}
 
 We can therefore compute the node assigned to a position $p$ in the ring in
-time $O(m)$ and constant memory, without explicitly building the ring.
+time $O(M)$ and constant memory, without explicitly building the ring.
 
 The algorithm can be further optimized using a binary search on the prefix sums
 of $s_i$, assuming they are already computed and stored.
-In this case the algorithm runs in $O(\log m)$ time and uses $O(m)$ memory.
+In this case the algorithm runs in $O(\log M)$ time and uses $O(M)$ memory.
 
 \paragraph{Example}
 Let's apply the implicit construction to the example in the previous section.
@@ -301,3 +306,55 @@ Repeating the algorithm for all $p = 0, \dots, 11$ we obtain:
 \]
 
 This matches the result of the explicit construction.
+
+\subsubsection{Standard deviation of workloads}
+\label{subsubsec:stddev}
+
+The replication ring distributes keys to nodes proportionally to their
+allocated bandwidth, such that the expected workload on each node is within its
+capacity.
+However, due to the probabilistic nature of key assignment, the actual workload
+may deviate from the expected value.
+We are thus interested in quantifying the standard deviation of the workload on
+each node.
+
+Assuming that the hash function distributes the keys uniformly and
+independently on the ring, the probability that a random key includes node $i$
+is
+\[
+  p_i \;=\; \frac{s_i}{B}.
+\]
+The number of distinct keys mapped to node $i$, denoted $|K_i|$, is
+\[
+  |K_i| \sim \mathrm{Binomial}\!\left(|K|,\,p_i\right).
+\]
+Hence
+\[
+  \mathbb{E}[|K_i|] = |K| \cdot p_i,
+  \qquad
+  \sigma_{|K_i|} = \sqrt{|K| \cdot p_i (1 - p_i)}.
+\]
+Since the workload on node $i$ is $w_i = |K_i| \cdot \frac{B}{|K|}$, we have
+\[
+    \mathbb{E}[w_i] = s_i
+    \quad
+    \sigma_{w_i} = \frac{B}{\sqrt{|K|}} \cdot \sqrt{p_i \cdot (1 - p_i)}.
+\]
+
+If the workload exceeds the expected value, the node will become overloaded
+leading to a slowdown.
+Assuming the actual workload on node $i$ to be
+$\mathbb{E}[w_i] + \delta_i \sigma_{w_i}$, we can compute the slowdown factor as
+\[
+    f_i = \frac{\mathbb{E}[w_i] + \delta_i \sigma_{w_i}}{s_i} =
+    1 + \frac{\delta_i}{\sqrt{|K|}} \cdot \sqrt{\frac{1}{p_i} - 1}.
+\]
+
+Under uniform key access the node with the biggest slowdown factor will
+bottleneck the entire system, so we can define the cluster-wide slowdown factor as
+\[
+    f = \max_i f_i = 1 + \frac{1}{\sqrt{|K|}} \cdot \max_i \delta_i \sqrt{\frac{1}{p_i} - 1}.
+\]
+
+When strict guarantees are required, the client can choose to overbook the
+table's bandwidth to accommodate potential slowdowns.
