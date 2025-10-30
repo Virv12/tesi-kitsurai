@@ -11,8 +11,11 @@ while satisfying the following requirements:
         for the table, both measured in requests per second.
 \end{enumerate}
 
-The expected workload on the $i$-th node is $\mathbb{E}[w_i] = \sum_{k \in K_i}
-p_k \cdot B$ where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
+The expected workload on the $i$-th node is
+\[
+    \mathbb{E}[w_i] = \sum_{k \in K_i} p_k \cdot B
+\]
+where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
 probability that key $k$ is requested and $B$ is the total bandwidth of the
 table, in requests per second.
 
@@ -25,7 +28,10 @@ keys in the table.
 
 Under this assumption, the expected workload on node $i$ is
 $\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$, so we can rewrite the second
-requirement as $\frac{|K_i|}{|K|} \leq \frac{s_i}{B}$.
+requirement as
+\[
+    \frac{|K_i|}{|K|} \leq \frac{s_i}{B}.
+\]
 
 Since we don't want to waste resources, we strengthen the requirement and
 enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
@@ -33,7 +39,10 @@ Summing over all nodes from the same AZ $z$, we get $\sum_{i :
 \mathrm{az}(i) = z} \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z}
 \frac{s_i}{B}$, since each key is assigned to at most one node from the same
 AZ, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
-$\sum_{i : \mathrm{az}(i) = z} s_i \leq B$, and $s_i \leq B$ for each node $i$.
+\[
+    \sum_{i : \mathrm{az}(i) = z} s_i \leq B
+\]
+and $s_i \leq B$ for each node $i$.
 
 Define $S = \sum s_i$, the total bandwidth allocated for the table across all
 nodes.
@@ -114,6 +123,8 @@ any AZ.
 The construction can be expressed in pseudocode as follows in
 Listing~\ref{lst:explicit-ring}.
 
+The algorithm runs in $O(S)$ time and uses $O(S)$ space.
+
 \begin{lstlisting}[
     language=Python,
     float=htbp,
@@ -145,8 +156,6 @@ def build_ring(table):
 
   return ring
 \end{lstlisting}
-
-This procedure runs in $O(S)$ time and uses $O(S)$ space.
 
 \paragraph{Example}
 Consider a table with parameters
