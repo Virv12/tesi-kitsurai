@@ -19,7 +19,8 @@ and which allowed us to measure the performance of CPU and disk.
 
 A purpose-built program (\texttt{ktb}) was developed to stress the system using multiple connections.
 We first recorded baseline values by having each machine stress itself in both \texttt{item-get} and \texttt{item-set} operations
-on a table with throttling disabled (i.e., set to sufficiently high limit) and value sizes of \SI{4}{\kilo\byte}.
+on a table with throttling disabled (i.e., set to sufficiently high limit),
+1000 keys and value sizes of \SI{4}{\kilo\byte}.
 
 Table~\ref{tab:results-stress} presents the results, across the get (\SI{4}{\kilo\byte}) test, we observe $H > M > A$; for set (\SI{4}{\kilo\byte}), $2H \approx M \approx A$.
 \texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the \SI{1}{\giga\bit} connection.
@@ -33,6 +34,32 @@ We configured the machines for either a uniform key distribution, where each mac
 or with a proportional key distribution, where each machine's bandwidth was still set sufficiently high but proportional to its self-stress results.
 In our setup, for simplicity, machines $M$ and $A$ were assigned the same value, while $H$ was configured with twice that amount.
 
+\paragraph{Statistical Tests}
+As introduced in section~\ref{subsubsec:stddev} the following tests
+may measure a slowdown due to the statistical nature of key distribution.
+
+For each test and for each node we independently assess whether the measured slowdown $f$ is attributable to the key distribution by:
+\begin{itemize}
+    \item Computing the expected $\delta_i$, according to Equation~\ref{eq:slowdown}, as follows:
+    \[
+        \delta_i = (f - 1) \cdot \sqrt{\frac{|K| \cdot p_i}{1 - p_i}}
+    \]
+    \item Testing the following null hypothesis:
+    \begin{center}
+        \textit{For each node, the keys were assigned according to a Binomial distribution with $N=1000$ and $p_i$ as specified by the configuration.}
+    \end{center}
+    We will compute the one-sided $p$-value by approximating the Binomial as a Gaussian.
+\end{itemize}
+Should we reject the null hypothesis, it implies another source of slowdown in the tested configuration,
+which will likely due to CPU and disk bottlenecks.
+On the other hand, shall the null hypothesis hold we can safely assume that the system performed as expected.
+
+Rejecting the null hypothesis implies the presence of an additional source of slowdown
+in the tested configuration, most likely CPU or disk bottlenecks.
+Conversely, if we fail to reject the null hypothesis,
+the observed performance does not provide sufficient evidence against the null hypothesis.
+Thus, we can conclude that the measured slowdown is \textit{likely} due to the statistical variability of key assignment.
+
 \paragraph{Distribution}
 To test the key distribution and scalability of the system, we used a table configured
 with enough bandwidth to saturate the test case, $N=1$, $R=1$, and $W=1$.
@@ -44,30 +71,31 @@ Thus, the slowest machine will be the first one to limit the number of requests.
 We can therefore expect the overall rate to be three times the minimum individual rate,
 as the other two machines will receive the same rate of request as the slowest one.
 In our setup, the slowest machine is $A$, which achieved \SI{4.8}{\kilo\hertz}, yielding an expected overall rate of \SI{14.4}{\kilo\hertz}.
+During testing the system reached \SI{13.2}{\kilo\hertz} or 92\% of the expected value,
+yielding $\delta_{1,2,3} = 1.9454$ and a $p$-value of $0.0259$.
+The resulting $p$-value is such that there is marginal evidence against the null hypothesis.
+We can conclude that this test likely measured a slowdown due to both a slightly bad distribution
+and additional overheads from CPU and/or disk.
 
+% 1/f = 92%; |K| = 1000; p_i = p_M = 1/3
+% f = 1.087
+% d_i = (f - 1) * math.sqrt(|K| * (p_i) / (1 - (p_i)))
+% d_1,2,3 = (1.087 - 1) * math.sqrt(1000 * (1/3) / (1 - (1/3))) = 1.945379140424816
+% P_1,2,3 = P(X as gaussian > E[X] + d_i * std_X) = 0.0259
 
 In the proportional case, as long as the machine bandwidth was configured correctly, no single machine should become a bottleneck.
 We can then expect the overall rate to be the sum of the individual machines.
 In our setup, this corresponds to \SI{20.6}{\kilo\hertz}.
+In this test the system managed \SI{17.0}{\kilo\hertz} or 83\% of the expected value,
+yielding for machine $M$ and $A$, deltas of $3.7245$ and a $p$-value of $9.7846e-05$,
+while for machine $H$ a delta of $6.4510$ with $p$-value that can be safely approximated with zero.
+The resulting $p$-values are such that we can always reject the null hypothesis.
+Thus, this test measured a significant slowdown due to CPU and disk overheads.
 
-
-Testing shows that the system scales as expected, reaching \SI{13.2}{\kilo\hertz} (92\%) and \SI{17.0}{\kilo\hertz} (83\%) of the expected values.
-The losses can in part be accounted for by the CPU overhead of running the test itself and the probabilistic nature of key distribution.
-
-%N=1000, p_i = 1/3
-%var = 1000 * 1/3 * 2/3 = 2/9 * 1000
-%stdev ~ 15
-%1 * stdev ~ 68% => 1 - 333/333+15 = 0,04310344828
-%0,9166666667
-
-%N=1000, p_1 = p_2 = 1/4, p_3 = 1/2
-%var_1,2 = 1000 * 1/4 * 3/4 = 3/16 * 1000
-%stdev_1,2 ~ 14
-%1 * stdev ~ 68% => 1 - 250/250+14 = 0,05303030303
-%var_3 = 1000 * 1/2 * 1/2 = 1/4 * 1000
-%stdev_3 ~ 16
-%1 * stdev ~ 68% => 1 - 500/500+16 = 0,03100775194
-%0,8252427184
+% 1/f = 83%; |K| = 1000; p_1 = p_2 = 1/4, p_3 = 1/2
+% f = 1.204
+% d_1,2 = (1.204 - 1) * math.sqrt(1000 * (1/4) / (1 - (1/4))) ~ 3.7245133910351287; P = 9.784616255356672e-05
+% d_3   = (1.204 - 1) * math.sqrt(1000 * (1/2) / (1 - (1/2))) ~ 6.451046426743493; P ~ 0
 
 \paragraph{Replication}
 To test the system replication, a table created with enough bandwidth to saturate the test case, $N=2$, $R=2$ and $W=2$ was used.
@@ -78,29 +106,26 @@ In the uniform case, the slowest machine again limits the overall rate.
 Due to replication, each machine receives $2/3$ of the client requests, as the key space is distributed twice.
 Therefore, the expected overall rate is $3/2$ of the slowest machine rate, accounting for the remaining third that do not hit the slowest machine.
 In our case the total expected overall rate is \SI{7.2}{\kilo\hertz}.
+Testing confirms that the system scales as predicted, achieving \SI{7.2}{\kilo\hertz} (100\%).
 
+% 1/f = 100%; |K| = 1000; p_1,2,3 = 2/3
+% f = 1.0001
+% d_M = (1.0001 - 1) * math.sqrt(1000 * (2/3) / (1 - (2/3)))
+%     = 0.004472135954999086; P = 0.49822
 
 In the proportional case, our faster node $H$ receives a full copy of the table, while $M$ and $A$ each store half.
 We can expect the overall rate to be the minimum between $H$'s rate and the sum of $M$ and $A$'s rates.
 In our setup, $H$'s is faster than $M$ and $A$ combined, yielding an expected overall rate of \SI{9.8}{\kilo\hertz}.
+The system managed \SI{9.4}{\kilo\hertz} or 96\% of the expected values,
+yielding for machine $M$ and $A$, deltas of $1.3282$ and a $p$-value of $0.0921$,
+while for machine $H$ the delta is not significant as it has by construction a copy of each key.
+In this case, the $p$-value is high enough that we can not reject the null hypothesis,
+and the test likely measure a slowdown due to key distribution.
 
-
-Testing confirms that the system scales as predicted, achieving \SI{7.2}{\kilo\hertz} (100\%) and \SI{9.4}{\kilo\hertz} (96\%) of the expected values.
-The losses can again be explained by the CPU overhead of running the test itself and the probabilistic nature of key distribution.
-
-
-%N=1000, p_1,2,3 = 2/3
-%var_1,2,3 = 1000 * 2/3 * 1/3 = 2/9 * 1000
-%stdev ~ 15
-%1 * stdev ~ 68% => 1 - 666/666+15 = 0,02202643172
-%1
-
-%N=1000, p_1,2 = 1/2, p_3=1
-%var_1,2 = 1000 * 1/2 * 1/2 = 1/4 * 1000
-%stdev ~ 16
-%1 * stdev ~ 68% => 1 - 500/500+16 = 0,031
-%var_3 = 0
-%0,9591836735
+% 1/f = 96%; |K| = 1000; p_1,2 = 1/2, p_3=1
+% f = 1.042
+% d_1,2 = (1.042 - 1) * math.sqrt(1000 * (1/2) / (1 - (1/2))) ~ 1.3281566172707204; P = 0.09206
+% d_3   = (1.042 - 1) * math.sqrt(1000 * (1) / (1 - (1))) ~ ?; Questo e' degenere?
 
 \begin{table}
     \setlength{\tabcolsep}{3pt}

@@ -21,7 +21,7 @@ table, in requests per second.
 
 An extreme request distribution prevents scaling: if some key $k$ has $p_k = 1$
 and is placed on node $i$, then $\mathbb[w_i] = B$, which would require
-$s_i \geq B$, i.e., node $i$ must handle the entire table’s workload.
+$s_i \geq B$, i.e., node $i$ must handle the entire table's workload.
 To avoid this problem, we assume that keys are uniformly distributed, i.e.,
 $p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is the set of
 keys in the table.
@@ -80,7 +80,7 @@ is assigned at most once to the same node, the expected number of keys assigned
 to node $i$ is $|K_i| = |K| \cdot \frac{s_i}{B}$, thus satisfying the second
 requirement.
 
-\subsubsection{Explicit construction}
+\subsubsection{Explicit Construction}
 \label{subsubsec:explicit-construction}
 
 For each AZ $z$, define
@@ -223,7 +223,7 @@ if $p = 2$ then the key is assigned to nodes $2$, $0$, and $1$
     \label{fig:ring-example}
 \end{figure}
 
-\subsubsection{Implicit construction}
+\subsubsection{Implicit Construction}
 \label{subsubsec:implicit-construction}
 
 Since the allocated bandwidth can be considerably high, constructing the ring
@@ -311,7 +311,7 @@ Repeating the algorithm for all $p = 0, \dots, 11$ we obtain:
 
 This matches the result of the explicit construction.
 
-\subsubsection{Standard deviation of workloads}
+\subsubsection{Standard Deviation of Workloads}
 \label{subsubsec:stddev}
 
 The replication ring distributes keys to nodes proportionally to their
@@ -355,10 +355,11 @@ $\mathbb{E}[w_i] + \delta_i \sigma_{w_i}$, we can compute the slowdown factor as
 \]
 
 Under uniform key access the node with the biggest slowdown factor will
-bottleneck the entire system, so we can define the cluster-wide slowdown factor as
-\[
+bottleneck the entire system, so we can define the cluster-wide slowdown factor as:
+\begin{equation}
+    \label{eq:slowdown}
     f = \max_i f_i = 1 + \frac{1}{\sqrt{|K|}} \cdot \max_i \delta_i \sqrt{\frac{1}{p_i} - 1}.
-\]
+\end{equation}
 
 When strict guarantees are required, the client can choose to overbook the
 table's bandwidth to accommodate potential slowdowns.
