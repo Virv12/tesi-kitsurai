@@ -7,23 +7,23 @@ As our database has no consistency guarantees, we focus our experimentation on l
 
 Experimental data were collected using three machines:
 \begin{itemize}
-    \item Machine $M$: MacBook Pro with M1 and \SI{32}{\giga\byte} RAM, built-in storage, operating system macOS~26, file system \texttt{APFS};
-    \item Machine $A$: Intel Core i7-8750H (6 cores, 12 threads with Hyper Threading, locked at \SI{2.2}{\giga\hertz}), \SI{16}{\giga\byte} DDR4 RAM, \SI{128}{\giga\byte} SATA3 SSD, operating system Arch Linux, kernel \texttt{6.17.1}, file system \texttt{btrfs};
-    \item Machine $H$: Intel Core i5-12450H (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at \SI{1.5}{\giga\hertz} and P-Cores at \SI{2}{\giga\hertz}), \SI{16}{\giga\byte} DDR4 RAM, \SI{512}{\giga\byte} NVMe 4xPCIe3 SSD, operating system Arch Linux, kernel \texttt{6.17.1}, file system \texttt{XFS}.
+    \item Machine $M$: MacBook Pro with M1 and \qty{32}{\giga\byte} RAM, built-in storage, operating system macOS~26, file system \texttt{APFS};
+    \item Machine $A$: Intel Core i7-8750H (6 cores, 12 threads with Hyper Threading, locked at \qty{2.2}{\giga\hertz}), \qty{16}{\giga\byte} DDR4 RAM, \qty{128}{\giga\byte} SATA3 SSD, operating system Arch Linux, kernel \texttt{6.17.1}, file system \texttt{btrfs};
+    \item Machine $H$: Intel Core i5-12450H (4 E-cores and 4 P-Cores, 12 threads with Hyper Threading, E-Cores locked at \qty{1.5}{\giga\hertz} and P-Cores at \qty{2}{\giga\hertz}), \qty{16}{\giga\byte} DDR4 RAM, \qty{512}{\giga\byte} NVMe 4xPCIe3 SSD, operating system Arch Linux, kernel \texttt{6.17.1}, file system \texttt{XFS}.
 \end{itemize}
 
-The machines were connected via a \SI{1}{\giga\bit} Ethernet network with a latency of about \SI{0.3}{\milli\second} while under stress.
-For these tests, we configured the system with a \SI{4}{\kilo\byte} max request size,
+The machines were connected via a \qty{1}{\giga\bit} Ethernet network with a latency of about \qty{0.3}{\milli\second} while under stress.
+For these tests, we configured the system with a \qty{4}{\kilo\byte} max request size,
 a value chosen to avoid saturating the network connection in most tests,
 and which allowed us to measure the performance of CPU and disk.
 
 A purpose-built program (\texttt{ktb}) was developed to stress the system using multiple connections.
 We first recorded baseline values by having each machine stress itself in both \texttt{item-get} and \texttt{item-set} operations
 on a table with throttling disabled (i.e., set to sufficiently high limit),
-1000 keys and value sizes of \SI{4}{\kilo\byte}.
+1000 keys and value sizes of \qty{4}{\kilo\byte}.
 
-Table~\ref{tab:results-stress} presents the results, across the get (\SI{4}{\kilo\byte}) test, we observe $H > M > A$; for set (\SI{4}{\kilo\byte}), $2H \approx M \approx A$.
-\texttt{item-get} operations at \SI{512}{\byte} have been reported when the \SI{4}{\kilo\byte} run saturated the \SI{1}{\giga\bit} connection.
+Table~\ref{tab:results-stress} presents the results, across the get (\qty{4}{\kilo\byte}) test, we observe $H > M > A$; for set (\qty{4}{\kilo\byte}), $2H \approx M \approx A$.
+\texttt{item-get} operations at \qty{512}{\byte} have been reported when the \qty{4}{\kilo\byte} run saturated the \qty{1}{\giga\bit} connection.
 
 The scalability and replication of the system were then evaluated.
 Unless stated otherwise, the following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
@@ -50,12 +50,8 @@ For each test and for each node we independently assess whether the measured slo
     \end{center}
     We will compute the one-sided $p$-value by approximating the Binomial as a Gaussian.
 \end{itemize}
-Should we reject the null hypothesis, it implies another source of slowdown in the tested configuration,
-which will likely due to CPU and disk bottlenecks.
-On the other hand, shall the null hypothesis hold we can safely assume that the system performed as expected.
-
 Rejecting the null hypothesis implies the presence of an additional source of slowdown
-in the tested configuration, most likely CPU or disk bottlenecks.
+in the tested configuration, most likely CPU bottlenecks.
 Conversely, if we fail to reject the null hypothesis,
 the observed performance does not provide sufficient evidence against the null hypothesis.
 Thus, we can conclude that the measured slowdown is \textit{likely} due to the statistical variability of key assignment.
@@ -70,32 +66,39 @@ In the uniform case, each machine receives one third of the requests.
 Thus, the slowest machine will be the first one to limit the number of requests.
 We can therefore expect the overall rate to be three times the minimum individual rate,
 as the other two machines will receive the same rate of request as the slowest one.
-In our setup, the slowest machine is $A$, which achieved \SI{4.8}{\kilo\hertz}, yielding an expected overall rate of \SI{14.4}{\kilo\hertz}.
-During testing the system reached \SI{13.2}{\kilo\hertz} or 92\% of the expected value,
-yielding $\delta_{1,2,3} = 1.9454$ and a $p$-value of $0.0259$.
+In our setup, the slowest machine is $A$, which achieved \qty{4.8}{\kilo\hertz},
+yielding an expected overall rate of \qty{14.4}{\kilo\hertz}.
+During testing the system reached \qty{13.2}{\kilo\hertz} or \qty{92}{\percent} of the expected value,
+yielding deltas of \num{2.0328} and a $p$-value of \num{0.0210}.
 The resulting $p$-value is such that there is marginal evidence against the null hypothesis.
 We can conclude that this test likely measured a slowdown due to both a slightly bad distribution
-and additional overheads from CPU and/or disk.
+and additional CPU overhead\@.
 
-% 1/f = 92%; |K| = 1000; p_i = p_M = 1/3
-% f = 1.087
-% d_i = (f - 1) * math.sqrt(|K| * (p_i) / (1 - (p_i)))
-% d_1,2,3 = (1.087 - 1) * math.sqrt(1000 * (1/3) / (1 - (1/3))) = 1.945379140424816
-% P_1,2,3 = P(X as gaussian > E[X] + d_i * std_X) = 0.0259
+%def make_numbers(actual, expected, prop):
+%    f = actual / expected
+%    f = 1 / f
+%    d = (f - 1) * sqrt(1000 * prop / (1 - prop))
+%    p = Fraction(1, 2) * erfc(d / sqrt(2))
+%    print(f'{d.n()=}, {p.n()=}')
+
+% p_1,2,3 = 1/3
+% make_numbers(Fraction(132, 10), Fraction(144, 10), 1/3)
+% d.n()=2.03278907045435, p.n()=0.0210369189124584
 
 In the proportional case, as long as the machine bandwidth was configured correctly, no single machine should become a bottleneck.
 We can then expect the overall rate to be the sum of the individual machines.
-In our setup, this corresponds to \SI{20.6}{\kilo\hertz}.
-In this test the system managed \SI{17.0}{\kilo\hertz} or 83\% of the expected value,
-yielding for machine $M$ and $A$, deltas of $3.7245$ and a $p$-value of $9.7846e-05$,
-while for machine $H$ a delta of $6.4510$ with $p$-value that can be safely approximated with zero.
+In our setup, this corresponds to \qty{20.6}{\kilo\hertz}.
+In this test the system managed \qty{17.0}{\kilo\hertz} or \qty{83}{\percent} of the expected value,
+yielding for machine $M$ and $A$, deltas of \num{3.8663} and a $p$-value of \num{5.5255e-5},
+while for machine $H$ a delta of \num{6.6966} with $p$-value that can be safely approximated with zero.
 The resulting $p$-values are such that we can always reject the null hypothesis.
-Thus, this test measured a significant slowdown due to CPU and disk overheads.
+Thus, this test measured a significant slowdown due to CPU overhead.
 
-% 1/f = 83%; |K| = 1000; p_1 = p_2 = 1/4, p_3 = 1/2
-% f = 1.204
-% d_1,2 = (1.204 - 1) * math.sqrt(1000 * (1/4) / (1 - (1/4))) ~ 3.7245133910351287; P = 9.784616255356672e-05
-% d_3   = (1.204 - 1) * math.sqrt(1000 * (1/2) / (1 - (1/2))) ~ 6.451046426743493; P ~ 0
+% p_1 = p_2 = 1/4, p_3 = 1/2
+% make_numbers(Fraction(170, 10), Fraction(206, 10), 1/2)
+% d.n()=6.69658798623892, p.n()=1.06671009488812e-11
+% make_numbers(Fraction(170, 10), Fraction(206, 10), 1/4)
+% d.n()=3.86627687650705, p.n()=5.52547364766706e-5
 
 \paragraph{Replication}
 To test the system replication, a table created with enough bandwidth to saturate the test case, $N=2$, $R=2$ and $W=2$ was used.
@@ -105,27 +108,26 @@ This configuration allows for reproducible performance ($N=R=W$) and was conside
 In the uniform case, the slowest machine again limits the overall rate.
 Due to replication, each machine receives $2/3$ of the client requests, as the key space is distributed twice.
 Therefore, the expected overall rate is $3/2$ of the slowest machine rate, accounting for the remaining third that do not hit the slowest machine.
-In our case the total expected overall rate is \SI{7.2}{\kilo\hertz}.
-Testing confirms that the system scales as predicted, achieving \SI{7.2}{\kilo\hertz} (100\%).
+In our case the total expected overall rate is \qty{7.2}{\kilo\hertz}.
+Testing confirms that the system scales as predicted, achieving the expected rate of \qty{7.2}{\kilo\hertz} .
 
-% 1/f = 100%; |K| = 1000; p_1,2,3 = 2/3
-% f = 1.0001
-% d_M = (1.0001 - 1) * math.sqrt(1000 * (2/3) / (1 - (2/3)))
-%     = 0.004472135954999086; P = 0.49822
+% p_1,2,3 = 2/3
+% make_numbers(Fraction(72, 10), Fraction(72, 10), 2/3)
+% d.n()=0, p.n()=0.500000000000000
 
 In the proportional case, our faster node $H$ receives a full copy of the table, while $M$ and $A$ each store half.
 We can expect the overall rate to be the minimum between $H$'s rate and the sum of $M$ and $A$'s rates.
-In our setup, $H$'s is faster than $M$ and $A$ combined, yielding an expected overall rate of \SI{9.8}{\kilo\hertz}.
-The system managed \SI{9.4}{\kilo\hertz} or 96\% of the expected values,
-yielding for machine $M$ and $A$, deltas of $1.3282$ and a $p$-value of $0.0921$,
-while for machine $H$ the delta is not significant as it has by construction a copy of each key.
+In our setup, $H$'s is faster than $M$ and $A$ combined, yielding an expected overall rate of \qty{9.8}{\kilo\hertz}.
+The system managed \qty{9.4}{\kilo\hertz} or \qty{96}{\percent} of the expected values,
+yielding for machine $M$ and $A$, deltas of \num{1.3457} and a $p$-value of \num{0.0892},
+while for machine $H$ the delta is not significant as it has, by construction, a copy of each key.
 In this case, the $p$-value is high enough that we can not reject the null hypothesis,
 and the test likely measure a slowdown due to key distribution.
 
-% 1/f = 96%; |K| = 1000; p_1,2 = 1/2, p_3=1
-% f = 1.042
-% d_1,2 = (1.042 - 1) * math.sqrt(1000 * (1/2) / (1 - (1/2))) ~ 1.3281566172707204; P = 0.09206
-% d_3   = (1.042 - 1) * math.sqrt(1000 * (1) / (1 - (1))) ~ ?; Questo e' degenere?
+% p_1,2 = 1/2, p_3=1
+% make_numbers(Fraction(94, 10), Fraction(98, 10), 1/2)
+% d.n()=1.34565006815676, p.n()=0.0892076982478822
+% meaningless otherwise
 
 \begin{table}
     \setlength{\tabcolsep}{3pt}
@@ -133,34 +135,39 @@ and the test likely measure a slowdown due to key distribution.
     \centering
     \caption{Maximum request frequencies}
     \label{tab:results-stress}
-    \begin{tabular}{lrrr}
+
+
+    \sisetup{table-format = 2.1{\textsuperscript{\emph{A}}}}
+    \begin{tabular}{lSSS}
         \toprule
-        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{3}{c}{Throughput (\si{\kilo\hertz})} \\
+        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{3}{c}{Throughput (\unit{\kilo\hertz})} \\
         \cmidrule{2-4}
-        & \texttt{get} (\SI{512}{\byte}) & \texttt{get} (\SI{4}{\kilo\byte}) & \texttt{set} (\SI{4}{\kilo\byte}) \\
+        & \texttt{get} \qty{512}{\byte} & \texttt{get} \qty{4}{\kilo\byte} & \texttt{set} \qty{4}{\kilo\byte} \\
         \midrule
-        Machine $M$ self stress   & --                    & 64.0                     & 5.0                      \\
-        Machine $H$ self stress   & --                    & 83.3                     & 10.8                     \\
-        Machine $A$ self stress   & --                    & 56.6                     & 4.8                      \\
-        Uniform with $N = 1$      & 102.0                 & 44.1                     & 13.2                     \\
-        Proportional with $N = 1$ & 97.0                  & 56.5                     & 17.0                     \\
-        Uniform with $N = 2$      & 67.3                  & 21.8                     & 7.2                      \\
-        Proportional with $N = 2$ & 62.4                  & 28.0                     & 9.4                      \\
+        Machine $M$ self stress   & \textendash                   & 64.0                             & 5.0                              \\
+        Machine $H$ self stress   & \textendash                   & 83.3                             & 10.8                             \\
+        Machine $A$ self stress   & \textendash                   & 56.6                             & 4.8                              \\
+        Uniform with $N = 1$      & 102.0                         & 44.1                             & 13.2                             \\
+        Proportional with $N = 1$ & 97.0                          & 56.5                             & 17.0                             \\
+        Uniform with $N = 2$      & 67.3                          & 21.8                             & 7.2                              \\
+        Proportional with $N = 2$ & 62.4                          & 28.0                             & 9.4                              \\
         \bottomrule
     \end{tabular}
 \end{table}
 
+%\footnotetext{These tests were limited by the \qty{1}{\giga\bit} connection between the machines.}
+
 \paragraph{Real-Time}
 The last test focused on evaluating the real-time properties of the system, simulating a concrete use case.
 With a proportional bandwidth configuration matching the measured rates in the self stress,
-a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a bandwidth of \SI{200}{\hertz}.
+a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a bandwidth of \qty{200}{\hertz}.
 To represent external interference, another table $T_O$ was created with $N=2$, $R=2$, $W=2$
 and bandwidth such that it would saturate the machines configured bandwidth.
 To stress the system, two extra instances of \texttt{ktb} were executed on machines $A$ and $M$, both targeting $T_O$.
 The reported data was collected from machine $H$'s \texttt{ktb} instance targeting $T_T$.
 
-The system successfully isolated the target table $T_T$ from the outside noise, maintaining the allocated throughput of \SI{200}{\hertz}.
-Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than \SI{200}{\hertz},
+The system successfully isolated the target table $T_T$ from the outside noise, maintaining the allocated throughput of \qty{200}{\hertz}.
+Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than \qty{200}{\hertz},
 both with and without external stress.
 Overall, a slight increase in latency was observed, which is expected, as no explicit latency control mechanism is implemented.
 
@@ -170,7 +177,7 @@ Overall, a slight increase in latency was observed, which is expected, as no exp
     \label{tab:results-isolation}
     \begin{tabular}{lrrrrrr}
         \toprule
-        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{5}{c}{Latency (\si{\milli\second})} \\
+        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{5}{c}{Latency (\unit{\milli\second})} \\
         \cmidrule{2-6}
         & Average & $P_{50}$ & $P_{90}$ & $P_{99}$ & $P_{99.9}$ \\
         \midrule

@@ -3,7 +3,7 @@
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
 Amazon's Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
-based on consistent hashing from~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
+based on \textit{consistent hashing} from Karger et al.~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
 Conflicting updates are detected through versioning and are resolved
 at read time either automatically by the system whenever possible (syntactic reconciliation),

@@ -17,7 +17,7 @@ These constraints create a space of hard engineering and algorithmic problems --
 Building practical, tenant-aware replicated stores thus requires cross-layer designs spanning networking, storage, and control planes.
 
 Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
-which guarantee response times below \SI{10}{\milli\second} for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}.
+which guarantee response times below \qty{10}{\milli\second} for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}.
 However, providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
 
 Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,

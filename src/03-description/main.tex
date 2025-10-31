@@ -118,7 +118,7 @@ table's budget, preventing co-located workloads from interfering and ensuring
 that no single table can monopolize local resources.
 
 The regulator is rate-based and converges to the configured average rate on
-each node, while permitting a short, bounded burst of \SI{100}{\milli\second}
+each node, while permitting a short, bounded burst of \qty{100}{\milli\second}
 to absorb micro-bursts.
 Over longer intervals, the admitted throughput per node is bounded to $s_i$,
 yielding table-level guarantees in aggregate without relying on a centralized
