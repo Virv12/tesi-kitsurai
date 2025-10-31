@@ -3,7 +3,7 @@
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
 Amazon's Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
-based on \textit{consistent hashing} from Karger et al.~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
+built on Karger et al.'s \textit{consistent hashing}~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
 Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
 Conflicting updates are detected through versioning and are resolved
 at read time either automatically by the system whenever possible (syntactic reconciliation),
@@ -32,10 +32,10 @@ a predictable distribution that allows for controlled access control.
 It is beyond the scope of this paper to address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
 Moreover, to further simplify the design and reduce the scope of this paper,
 our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user.
-Differently from Dynamo's reconciliation, our system is not capable of any type of reconciliation
-and offloads the consistency problem to the user, by returning all read values.
+Unlike Dynamo's approach to reconciliation, our system does not perform any reconciliation;
+instead, it offloads consistency to the user by returning all read values.
 
-Gupta et al.~\cite{FailureDetection} demonstrate that traditional heartbeat-based failure detectors fail to scale,
+Gupta et al.~\cite{FailureDetection} demonstrate that traditional heartbeat-based failure detectors do not scale,
 and propose a randomized approach to overcome this limitation.
 \textit{SWIM}~\cite{SWIM} builds on this idea, introducing a scalable gossip-based membership protocol
 that combines epidemic dissemination with a suspicion mechanism to ensure robustness and bounded detection time.

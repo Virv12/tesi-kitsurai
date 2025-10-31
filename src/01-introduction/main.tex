@@ -31,7 +31,7 @@ Its underlying storage \textit{GFS}~\cite{GFS} also does not make latency one of
 focusing instead on performance for higher throughput, and is also deployed in multiple clusters to support differentiated applications.
 
 The same fundamental performance problem has been tackled in columnar data stores,
-which provide faster access to individual columns than classic relational databases.
+which provide faster access to individual columns when compared with classic relational databases.
 Development in the last years has increased due to growing analytical workloads,
 and literature~\cite{ColumnarSurvey, ColumnOrientedDatabase} has intensified its focus on storage layouts,
 compression and execution techniques that exploit columnar layouts to minimize I/O and CPU overhead for selective and analytical queries.
@@ -40,13 +40,14 @@ compression and execution techniques that exploit columnar layouts to minimize I
 The Rustikai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
-It achieves this with a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
+It achieves these results by leveraging a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
 The resulting system is designed to work without the need for coordination, making it resilient to faults and network partitions.
 
 The project is implemented in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
 Rust is known for delivering performance comparable to C++ while avoiding common classes of errors such as race conditions or memory leaks,
 making it particularly suitable for programming complex distributed systems.
-In addition, it has an ever-growing set of high quality libraries that simplified development considerably.
+In addition, it has an ever-growing set of high quality libraries
+that have considerably simplified the development of this project.
 
 \paragraph{Paper Organization}
 The paper is organized as follows: Section~\ref{sec:related}

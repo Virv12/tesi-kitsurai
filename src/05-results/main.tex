@@ -22,8 +22,10 @@ We first recorded baseline values by having each machine stress itself in both \
 on a table with throttling disabled (i.e., set to sufficiently high limit),
 1000 keys and value sizes of \qty{4}{\kilo\byte}.
 
-Table~\ref{tab:results-stress} presents the results, across the get (\qty{4}{\kilo\byte}) test, we observe $H > M > A$; for set (\qty{4}{\kilo\byte}), $2H \approx M \approx A$.
-\texttt{item-get} operations at \qty{512}{\byte} have been reported when the \qty{4}{\kilo\byte} run saturated the \qty{1}{\giga\bit} connection.
+Table~\ref{tab:results-stress} presents the results, across the \texttt{item-get} at \qty{4}{\kilo\byte} test, we observe $H > M > A$;
+while for \texttt{item-set} at \qty{4}{\kilo\byte}, $2H \approx M \approx A$.
+Whenever the \texttt{item-get} at \qty{4}{\kilo\byte} run saturated the \qty{1}{\giga\bit} connection,
+we also report the operation at \qty{512}{\byte}.
 
 The scalability and replication of the system were then evaluated.
 Unless stated otherwise, the following tests were conducted by running \texttt{ktb} on machine $H$, considering only \texttt{item-set} operations.
@@ -138,7 +140,7 @@ so the observed slowdown is likely due to an imbalanced key distribution.
         \toprule
         \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{3}{c}{Throughput (\unit{\kilo\hertz})} \\
         \cmidrule{2-4}
-        & \texttt{get} \qty{512}{\byte} & \texttt{get} \qty{4}{\kilo\byte} & \texttt{set} \qty{4}{\kilo\byte} \\
+        & \texttt{get}~\qty{512}{\byte} & \texttt{get}~\qty{4}{\kilo\byte} & \texttt{set}~\qty{4}{\kilo\byte} \\
         \midrule
         Machine $M$ self stress   & \textendash                   & 64.0                             & 5.0                              \\
         Machine $H$ self stress   & \textendash                   & 83.3                             & 10.8                             \\
