@@ -16,19 +16,18 @@ making precise throughput control for each client essential.
 These constraints create a space of hard engineering and algorithmic problems --- from replication protocols to resource managers --- that must be solved jointly.
 Building practical, tenant-aware replicated stores thus requires cross-layer designs spanning networking, storage, and control planes.
 
-Another aspect of growing importance is data access latency, as observed on platforms such as \textit{DynamoDB}~\cite{Dynamo2007},
-which guarantee response times below \qty{10}{\milli\second} for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}.
-However, providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
+In these systems,
+a key metric that is gaining attention is \emph{data access latency}, as witnessed
+by major commercial NoSQL solutions like Amazon \textit{DynamoDB}~\cite{Dynamo2022} or Google \textit{BigTable}~\cite{Bigtable}, that guarantee response times below \qty{10}{\milli\second}. For DynamoDB, the guarantee holds for small requests issued from within the EC2 cloud~\cite{DynamoWhitepaper}. In Bigtable, the guarantee relies on quota and throttling mechanisms that were not part of the original design but introduced later, as
+its underlying storage \textit{GFS}~\cite{GFS} also does not make latency one of its main features
+focusing on maximizing throughput instead. %%, and is also deployed in multiple clusters to support differentiated applications.
 
-Major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
+Providing latency and performance guarantees in distributed and multi-tenant environments proves extremely challenging.
+%
+Indeed, major open-source solutions like \textit{MongoDB}~\cite{Mongo} or \textit{Cassandra}~\cite{Cassandra} adopt a best effort approach,
 without guaranteeing precise limits on latency or throughput, especially when multiple clients share resources.
 Due to the inability to isolate traffic from multiple tenants, solutions like these are often deployed as separate instances per customer,
-thereby shifting resource-management and isolation responsibilities to the underlying cluster scheduler or provisioning layer.
-
-Even in major commercial NoSQL solutions, like Google's \textit{BigTable}~\cite{Bigtable},
-quota and throttling systems were only introduced later as useful feature and were not part of the original design.
-Its underlying storage \textit{GFS}~\cite{GFS} also does not make latency one of its main features,
-focusing instead on performance for higher throughput, and is also deployed in multiple clusters to support differentiated applications.
+shifting resource-management and isolation responsibilities to the underlying cluster scheduler or provisioning layer.
 
 The same fundamental performance problem has been tackled in columnar data stores,
 which provide faster access to individual columns when compared with classic relational databases.
@@ -41,7 +40,7 @@ The Rustikai project is presented as a first attempt to create a key-value store
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
 It achieves these results by leveraging a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
-The resulting system is designed to work without the need for coordination, making it resilient to faults and network partitions.
+The resulting system is designed to work without the need for replica coordination, making it resilient to faults and network partitions.
 
 The project is implemented in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.
 Rust is known for delivering performance comparable to C++ while avoiding common classes of errors such as race conditions or memory leaks,
