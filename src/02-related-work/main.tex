@@ -3,11 +3,11 @@
 
 Leaderless distributed key-value stores have been extensively studied in the academic literature.
 Amazon's Dynamo~\cite{Dynamo2007} introduced a decentralized architecture featuring hash-based partitioning
-built on Karger et al.'s \textit{consistent hashing}~\cite{ConsistentHashing}, gossip-based membership and synchronization powered by a Merkle-tree.
-Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts eventual consistency.
+built on Karger et al.'s \textit{consistent hashing}~\cite{ConsistentHashing}, gossip-based membership, and synchronization based on a Merkle-tree.
+Since maintaining strong consistency is costly in the presence of network partitions and failures, Dynamo adopts \emph{eventual consistency}.
 Conflicting updates are detected through versioning and are resolved
 at read time either automatically by the system whenever possible (syntactic reconciliation),
-otherwise the user itself is made to choose a good version (semantic reconciliation).
+or handed to the user, who is returned multiple versions of a record to choose from (semantic reconciliation).
 For readers seeking more detailed information, a comprehensive overview of consistency models
 can be found in the work of Bermbach et al.~\cite{ConsistencyOverview}.
 Cassandra~\cite{Cassandra} extends this design with tunable consistency levels and wide-column data modeling.
@@ -21,7 +21,7 @@ and splits them dynamically across multiple physical nodes.
 
 Recently, \textit{X-Stor}~\cite{XStor}, a cloud-native multi-model NoSQL data store, introduced a generalized Request Unit (RU) abstraction
 that encompasses all resource types --- CPU, memory, disk I/O, and network I/O --- into a single unified metric.
-This metric is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
+This is used both to enforce tenant-level request limits and by the system scheduler to migrate or scale hot partitions dynamically.
 Unlike DynamoDB's approach, which permanently splits partitions, X-Stor focuses on balancing live requests to maximize cluster utilization.
 
 Our work builds upon these foundations by maintaining a peer-uniform, leaderless architecture with gossip-based metadata synchronization.
@@ -29,11 +29,9 @@ It carries over DynamoDB's per-table bandwidth reservations, but introduces a cr
 allowing the system to refuse table creation when cluster resources cannot satisfy the requested guarantees.
 We manage to do this by re-using the same base ideas as in Karger et al.'s consistent hashing by using
 a predictable distribution that allows for controlled access control.
-It is beyond the scope of this paper to address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
-Moreover, to further simplify the design and reduce the scope of this paper,
-our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user.
-Unlike Dynamo's approach to reconciliation, our system does not perform any reconciliation;
-instead, it offloads consistency to the user by returning all read values.
+For the sake of simplicity, we do not address dynamic partition splitting, and we focus instead on the simpler case of uniform key access.
+Moreover, to further simplify the design,
+our system removes consistency guarantees entirely, delegating the resolution of conflicting values to the user, basically reusing the original Dynamo's semantic reconciliation approach: a read operation simply returns all the values stored on different replicas.
 
 Gupta et al.~\cite{FailureDetection} demonstrate that traditional heartbeat-based failure detectors do not scale,
 and propose a randomized approach to overcome this limitation.
@@ -50,6 +48,7 @@ Another relevant research direction focuses on reducing tail latency in existing
 Andreoli et al.~\cite{RTMongo, PriorityMongoDB}, propose per-request prioritization mechanisms
 to improve responsiveness in NoSQL Database-as-a-Service (DBaaS) platforms.
 Although our system addresses performance at a different architectural level,
-similar prioritization techniques could be integrated into our implementation.
+similar prioritization techniques could be integrated into our implementation
+in future extensions.
 
 % MAYBE: MicroFuge ha molto senso sia menzionato, dato che fa _circa_ quello che ho detto.
