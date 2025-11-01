@@ -2,13 +2,13 @@ Building multi-tenant key-value stores with predictable and stable performance
 turns out to be difficult, due to the need for tackling several performance engineering challenges.
 As a result, most of the NoSQL systems offer best-effort throughput and weak isolation under contention.
 
-We present Rustikai, an open-source, distributed and leaderless store that provides explicit
+We present Rustikai, an open-source, distributed and leaderless store providing explicit
 per-table throughput reservations while retaining horizontal scalability and high availability.
 Reservations are admitted at table creation through a cluster-wide allocator;
 enforcement relies on a bandwidth-proportional replication ring that balances
 load across availability zones and respects per-node budgets.
-
-Clients tune quorums ($N$, $R$, $W$) to trade latency and durability.
+%
+Clients can tune per-table quorum configurations to trade latency for durability.
 To keep the data path simple and resource-efficient, Rustikai avoids
 server-side reconciliation and background repair, tolerating multi-value reads
 when versions diverge.
