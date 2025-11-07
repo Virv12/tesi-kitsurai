@@ -13,46 +13,46 @@ while satisfying the following requirements:
 
 The expected workload on the $i$-th node is
 \[
-    \mathbb{E}[w_i] = \sum_{k \in K_i} p_k \cdot B
+    \mathbb{E}[w_i] = \sum_{k \in K_i} p_k \cdot T
 \]
 where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
-probability that key $k$ is requested and $B$ is the total throughput of the
+probability that key $k$ is requested and $T$ is the total throughput of the
 table, in requests per second.
 
 An extreme request distribution prevents scaling: if some key $k$ has $p_k = 1$
-and is placed on node $i$, then $\mathbb[w_i] = B$, which would require
-$s_i \geq B$, i.e., node $i$ must handle the entire table's workload.
+and is placed on node $i$, then $\mathbb[w_i] = T$, which would require
+$s_i \geq T$, i.e., node $i$ must handle the entire table's workload.
 To avoid this problem, we assume that keys are uniformly distributed, i.e.,
 $p_k = \frac{1}{|K|}$ for each key $k$ in the table, where $K$ is the set of
 keys in the table.
 
 Under this assumption, the expected workload on node $i$ is
-$\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot B$, so we can rewrite the second
+$\mathbb{E}[w_i] = \frac{|K_i|}{|K|} \cdot T$, so we can rewrite the second
 requirement as
 \[
-    \frac{|K_i|}{|K|} \leq \frac{s_i}{B}.
+    \frac{|K_i|}{|K|} \leq \frac{s_i}{T}.
 \]
 
 Since we don't want to waste resources, we strengthen the requirement and
-enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{B}$.
+enforce that $\frac{|K_i|}{|K|} = \frac{s_i}{T}$.
 Summing over all nodes from the same AZ $z$, we get $\sum_{i :
 \mathrm{az}(i) = z} \frac{|K_i|}{|K|} = \sum_{i : \mathrm{az}(i) = z}
-\frac{s_i}{B}$, since each key is assigned to at most one node from the same
+\frac{s_i}{T}$, since each key is assigned to at most one node from the same
 AZ, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
 \[
-    \sum_{i : \mathrm{az}(i) = z} s_i \leq B
+    \sum_{i : \mathrm{az}(i) = z} s_i \leq T
 \]
-and $s_i \leq B$ for each node $i$.
+and $s_i \leq T$ for each node $i$.
 
 Define $S = \sum s_i$, the total throughput allocated for the table across all
 nodes.
 By summing the second requirement over all nodes, we obtain $\frac{1}{|K|} \sum
-|K_i| = \frac{S}{B}$.
+|K_i| = \frac{S}{T}$.
 Since each key is assigned to exactly $N$ nodes, we have $\sum |K_i| = N
-\cdot |K|$, and so $S = B \cdot N$.
+\cdot |K|$, and so $S = T \cdot N$.
 
 To solve this problem we will use the \emph{replication ring}.
-This structure will require that the values $S$, $B$ and all $s_i$ be integers
+This structure will require that the values $S$, $T$ and all $s_i$ be integers
 with a granularity of $1$ request per second.
 We define the \emph{replication ring} as a circular array of size $S$ where for
 each position in the ring we assign a node $i$ such that:
@@ -73,11 +73,11 @@ computed position, i.e., to the nodes at positions $p, p + 1, \dots, p + N - 1$
 Since each interval of length $N$ contains distinct nodes, each key is assigned
 to $N$ nodes with different AZs, satisfying the first requirement.
 Furthermore, the probability that a key is assigned to position $p$ in the ring
-is $\frac{N}{S} = \frac{1}{B}$, so the expected number of keys assigned to the
-position is $|K| \cdot \frac{1}{B}$.
+is $\frac{N}{S} = \frac{1}{T}$, so the expected number of keys assigned to the
+position is $|K| \cdot \frac{1}{T}$.
 Since each node $i$ occupies exactly $s_i$ positions in the ring and each key
 is assigned at most once to the same node, the expected number of keys assigned
-to node $i$ is $|K_i| = |K| \cdot \frac{s_i}{B}$, thus satisfying the second
+to node $i$ is $|K_i| = |K| \cdot \frac{s_i}{T}$, thus satisfying the second
 requirement.
 
 \subsubsection{Explicit Construction}
@@ -87,7 +87,7 @@ For each AZ $z$, define
 \[
     S_z = \sum_{i : \mathrm{az}(i) = z} s_i
 \]
-An AZ $z$ is \emph{saturated} if $S_z = B$.
+An AZ $z$ is \emph{saturated} if $S_z = T$.
 
 \paragraph{Node order.}
 We order nodes by first grouping them by AZ and placing all saturated AZs
@@ -107,12 +107,12 @@ $s_i$ consecutive slots of the \emph{Position order}.
 \paragraph{Correctness.}
 Because nodes from the same AZ are consecutive in the \emph{Node order}, the
 $S_z$ slots of AZ $z$ occupy a contiguous run in the \emph{Position order}.
-Since each residue class contributes exactly $B$ positions and $S_z \le B$,
+Since each residue class contributes exactly $T$ positions and $S_z \le T$,
 that run spans at most two adjacent residue classes.
 Any two positions within the same residue class differ by a multiple of $N$.
 If the run crosses a class boundary, the last position of class $r$ and the
 first of class $r + 1$ are separated on the ring by $N + 1$ steps.
-Since $S_z \le B$, the run cannot complete a full circle and wrap around to the
+Since $S_z \le T$, the run cannot complete a full circle and wrap around to the
 first position of class $r$; saturated AZs are an exception as they complete
 one full circle, but all their positions belong to the same residue class
 because they are placed first in the \emph{Node order}.
@@ -135,7 +135,7 @@ def build_ring(table):
   # Positions order
   positions = []
   for x in range(table.N):
-    for y in range(table.B):
+    for y in range(table.T):
       positions.append(x + y * table.N)
 
   # Nodes order
@@ -161,14 +161,14 @@ def build_ring(table):
 Consider a table with parameters
 \[
     N = 3,\quad
-    B = 4,\quad
-    S = B \cdot N = 12,
+    T = 4,\quad
+    S = T \cdot N = 12,
 \]
 and five nodes, each in a distinct AZ ($az(i) = i$), with allocated throughput
 \[
     s_0 = 4,\; s_1 = 3,\; s_2 = 2,\; s_3 = 1,\; s_4 = 2.
 \]
-Since $S_{az(0)} = s_0 = 4 = B$, the AZ of node $0$ is saturated; all other AZs are non-saturated.
+Since $S_{az(0)} = s_0 = 4 = T$, the AZ of node $0$ is saturated; all other AZs are non-saturated.
 
 First we compute the \emph{Node order}.
 Node $0$ takes the first position since its AZ is the only saturated one.
@@ -235,11 +235,11 @@ Let $o_p$ be the position of $p$ in the \emph{Position order}.
 We find which residue class $p$ belongs to by computing $p \bmod N$; the index
 within that class is given by $\left\lfloor \frac{p}{N} \right\rfloor$.
 The value $p$ appears after all elements of previous classes, each containing
-$B$ elements, and after $\left\lfloor \frac{p}{N} \right\rfloor$ elements of
+$T$ elements, and after $\left\lfloor \frac{p}{N} \right\rfloor$ elements of
 its own class.
 Hence, the index of $p$ in the \emph{Position order} is
 \[
-    o_p = \Bigl\lfloor \frac{p}{N} \Bigr\rfloor + (p \bmod N) \cdot B.
+    o_p = \Bigl\lfloor \frac{p}{N} \Bigr\rfloor + (p \bmod N) \cdot T.
 \]
 Now we need to find the $o_p$-th assigned node, i.e., the node $i$ such that
 $\sum_{j=0}^{i-1} s_j \leq o_p < \sum_{j=0}^{i} s_j$, this is the node assigned
@@ -256,8 +256,8 @@ ring can be represented as in Listing~\ref{lst:implicit-ring}.
 ]
 def get_node_at_position(table, p):
     N = table.N
-    B = table.B
-    o_p = floor(p / N) + (p % N) * B
+    T = table.T
+    o_p = floor(p / N) + (p % N) * T
 
     acc = 0
     for node in range(table.nodes):
@@ -286,7 +286,7 @@ We start by computing the prefix sums $c_i = \sum_{j=0}^{i-1} s_j$, obtaining
 
 We then compute
 \[
-    o_p = \Bigl\lfloor \frac{p}{N} \Bigr\rfloor + (p \bmod N) \cdot B.
+    o_p = \Bigl\lfloor \frac{p}{N} \Bigr\rfloor + (p \bmod N) \cdot T.
 \]
 For example, for $p = 5$ we have
 \[
@@ -326,7 +326,7 @@ Assuming that the hash function distributes the keys uniformly and
 independently on the ring, the probability that a random key includes node $i$
 is
 \[
-  p_i \;=\; \frac{s_i}{B}.
+  p_i \;=\; \frac{s_i}{T}.
 \]
 The number of distinct keys mapped to node $i$, denoted $|K_i|$, is
 \[
@@ -338,11 +338,11 @@ Hence
   \qquad
   \sigma_{|K_i|} = \sqrt{|K| \cdot p_i (1 - p_i)}.
 \]
-Since the workload on node $i$ is $w_i = |K_i| \cdot \frac{B}{|K|}$, we have
+Since the workload on node $i$ is $w_i = |K_i| \cdot \frac{T}{|K|}$, we have
 \[
     \mathbb{E}[w_i] = s_i
     \quad
-    \sigma_{w_i} = \frac{B}{\sqrt{|K|}} \cdot \sqrt{p_i \cdot (1 - p_i)}.
+    \sigma_{w_i} = \frac{T}{\sqrt{|K|}} \cdot \sqrt{p_i \cdot (1 - p_i)}.
 \]
 
 If the workload exceeds the expected value, the node will become overloaded

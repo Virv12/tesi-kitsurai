@@ -22,7 +22,7 @@ Section~\ref{subsec:availability-zones}).
 
 Each table is characterized by four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{throughput} or $B$: the overall throughput, expressed as requests per second, to be granted
+    \item \texttt{throughput} or $T$: the overall throughput, expressed as requests per second, to be granted
         to clients accessing the table (see Section~\ref{subsec:throughput-model}).
     \item $N$: the replication factor for each key-value pair.
     \item \texttt{read\_concern} or $R$: the minimum number of nodes that must
@@ -31,7 +31,7 @@ Each table is characterized by four parameters specified by the user at creation
         that must successfully respond to a write request.
 \end{itemize}
 
-These must satisfy the constraints $R, W \in \{ 1, 2, \dots, N \}$ and $B > 0$.
+These must satisfy the constraints $R, W \in \{ 1, 2, \dots, N \}$ and $T > 0$.
 %
 The system computes automatically the following parameters:
 \begin{itemize}
@@ -41,7 +41,7 @@ The system computes automatically the following parameters:
         chosen to guarantee replication and data availability.
     \item $s_i$: the throughput (requests per second) allocated for the table on each node $i$,
       where the total throughput $S = \sum s_i$ satisfies the constraint
-      $S = B \cdot N$.
+      $S = T \cdot N$.
 \end{itemize}
 
 \subsection{Consistency and Client-Visible Semantics}
@@ -164,7 +164,7 @@ forward the request to the appropriate nodes.
 
 \begin{itemize}
     \item \textbf{\texttt{table-create}}: The client provides four parameters:
-        $B$, $N$, $R$, and $W$.
+        $T$, $N$, $R$, and $W$.
         The system allocates sufficient throughput across the nodes to satisfy
         the requested configuration, creates the table, and returns the
         generated \texttt{id} of the new table.
