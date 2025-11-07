@@ -121,6 +121,9 @@
 %\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 
 % TODO: Before release: check for packages that should not be included in the ACM template.
+\sisetup{per-mode = symbol}
+\DeclareSIUnit{\request}{req}
+\DeclareSIUnit{\rps}{\request\per\second}
 
 \lstdefinestyle{ACMstyle}{
     basicstyle=\ttfamily\small,

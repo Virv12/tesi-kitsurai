@@ -3,9 +3,10 @@ turns out to be difficult, due to the need for tackling several performance engi
 As a result, most of the NoSQL systems offer best-effort throughput and weak isolation under contention.
 
 We present Rustikai, an open-source, distributed and leaderless store providing explicit
-per-table throughput reservations while retaining horizontal scalability and high availability.
+per-table throughput reservations, measured in request per second (\unit{\rps}),
+while retaining horizontal scalability and high availability.
 Reservations are admitted at table creation through a cluster-wide allocator;
-enforcement relies on a bandwidth-proportional replication ring that balances
+enforcement relies on a throughput-proportional replication ring that balances
 load across availability zones and respects per-node budgets.
 %
 Clients can tune per-table quorum configurations to trade latency for durability.
@@ -13,7 +14,7 @@ To keep the data path simple and resource-efficient, Rustikai avoids
 server-side reconciliation and background repair, tolerating multi-value reads
 when versions diverge.
 
-Rustikai sustains reserved rates under co-located hot tenants, scales close to
+Rustikai sustains reserved throughputs under co-located hot tenants, scales close to
 analytic expectations across uniform and skewed workloads, and keeps tail
 latency modest without explicit latency control mechanism.
 By isolating tenants by construction Rustikai turns capacity planning into an
