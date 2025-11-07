@@ -9,7 +9,7 @@ Locally, a table is in one of four phases: \emph{unknown}, \emph{prepared},
 \emph{created}, or \emph{deleted}:
 \begin{itemize}
     \item \emph{unknown}: the node is not aware of the table.
-    \item \emph{prepared}: some bandwidth is allocated, but the table has not
+    \item \emph{prepared}: some throughput is allocated, but the table has not
         yet been created.
     \item \emph{created}: the table is fully operational on that node.
     \item \emph{deleted}: the table is no longer operational on that node.
@@ -76,15 +76,15 @@ To create a table, the following steps are performed:
     \item The client sends the table's parameters $B$, $N$,
         $R$, and $W$ to the router.
     \item The router generates an \texttt{id} for the table and computes the
-        effective bandwidth $S = B \cdot N$ to account for replication.
+        effective throughput $S = B \cdot N$ to account for replication.
     \item\label{step:prepare} The router iterates over the nodes in the
-        cluster, skipping unavailable ones, requesting a bandwidth allocation
-        for the new table, allocating up to $B$ on each AZ.
-        Each node can allocate as much bandwidth as it has available, up to the
+        cluster, skipping unavailable ones, requesting a throughput allocation
+        for the new table, allocating up to $B$ on each AZ\@.
+        Each node can allocate as much throughput as it has available, up to the
         requested amount, after allocating, the node marks the
         table as locally \emph{prepared}.
-    \item Once sufficient bandwidth is obtained (at least $S$), the router
-        defines the list of responsible nodes and their respective bandwidths
+    \item Once sufficient throughput is obtained (at least $S$), the router
+        defines the list of responsible nodes and their respective throughputs
         $s_i$.
     \item\label{step:commit} The router asks the nodes that responded in
         step~\ref{step:prepare} to commit the table; on these nodes the table
@@ -100,15 +100,15 @@ be considered globally \emph{created}.
 If any node fails to respond in step~\ref{step:commit}, the router will
 consider the table creation failed, and will return an error to the client.
 It will also inform the nodes that responded in step~\ref{step:prepare} to
-delete the table, allowing the bandwidth to be freed.
+delete the table, allowing the throughput to be freed.
 
 If the router fails between step~\ref{step:prepare} and step~\ref{step:commit},
 some nodes will have marked the table as locally \emph{prepared}, wasting the
-reserved bandwidth.
+reserved throughput.
 To avoid this, each node that participates in the creation of a table maintains
 a timeout of 1 minute.
 If the node does not receive a commit request within this time, it will mark
-the table as locally \emph{deleted}, freeing the allocated bandwidth.
+the table as locally \emph{deleted}, freeing the allocated throughput.
 
 \subsubsection{Deletion}
 \label{subsubsec:deletion}
@@ -121,5 +121,5 @@ considered deleted by all nodes.
 
 Even if it is not strictly necessary, the node receiving the deletion request
 acts as a router, informing all responsible nodes of the deletion, to allow
-them to free the allocated bandwidth and storage space more quickly, and
+them to free the allocated throughput and storage space more quickly, and
 prevent further read or write requests to the deleted table.

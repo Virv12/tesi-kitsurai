@@ -32,8 +32,8 @@ Unless stated otherwise, the following tests were conducted by running \texttt{k
 \texttt{item-get} operations were excluded because the operating system caches file reads, making their results unrepresentative of true random-access disk performance.
 Nevertheless, the measured req/s values for \texttt{item-get} operations are reported in Table~\ref{tab:results-stress}.
 
-We configured the machines for either a uniform key distribution, where each machine's bandwidth parameter was set to the same sufficiently high value,
-or with a proportional key distribution, where each machine's bandwidth was still set sufficiently high but proportional to its self-stress results.
+We configured the machines for either a uniform key distribution, where each machine's throughput parameter was set to the same sufficiently high value,
+or with a proportional key distribution, where each machine's throughput parameter was still set sufficiently high but proportional to its self-stress results.
 In our setup, for simplicity, machines $M$ and $A$ were assigned the same value, while $H$ was configured with twice that amount.
 
 \paragraph{Statistical Tests}
@@ -68,8 +68,8 @@ so the measured slowdown is \textit{likely} due to statistical variability of ke
 
 \paragraph{Distribution}
 To test key distribution and scalability we used a table configured
-with sufficient bandwidth to saturate the test case, $N=1$, $R=1$, and $W=1$.
-This configuration distributes requests across peers according to each machine's bandwidth proportion.
+with sufficient throughput to saturate the test case, $N=1$, $R=1$, and $W=1$.
+This configuration distributes requests across peers according to each machine's throughput proportion.
 
 In the uniform case each machine receives one third of the requests,
 so the slowest machine becomes the bottleneck.
@@ -85,7 +85,7 @@ thus the slowdown is likely due to both a slightly imbalanced distribution and a
 % make_numbers(Fraction(132, 10), Fraction(144, 10), 1/3)
 % d.n()=2.03278907045435, p.n()=0.0210369189124584
 
-In the proportional case, as long as the machine bandwidth are configured correctly no single machine should become a bottleneck
+In the proportional case, as long as the machine throughput are configured correctly no single machine should become a bottleneck
 and the overall throughput should equal the sum of individual throughputs.
 In our setup, this corresponds to \qty{20.6}{\kilo\hertz},
 while the test measured \qty{17.0}{\kilo\hertz} or \qty{83}{\percent} of the expected value.
@@ -101,7 +101,7 @@ indicating a significant slowdown due to CPU overhead.
 % d.n()=3.86627687650705, p.n()=5.52547364766706e-5
 
 \paragraph{Replication}
-To test replication we used a table with sufficient bandwidth, $N=2$, $R=2$, and $W=2$.
+To test replication we used a table with sufficient throughput, $N=2$, $R=2$, and $W=2$.
 This configuration provides reproducible performance ($N=R=W$) and was preferred over the $N=3$, $R=3$, $W=3$ case.
 
 In the uniform replication case each machine receives two thirds of client requests, as the key space is replicated twice,
@@ -157,10 +157,10 @@ so the observed slowdown is likely due to an imbalanced key distribution.
 
 \paragraph{Real-Time}
 The last test focused on evaluating the real-time properties of the system, simulating a concrete use case.
-With a proportional bandwidth configuration matching the measured rates in the self stress,
-a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a bandwidth of \qty{200}{\hertz}.
+With a proportional throughput configuration matching the measured rates in the self stress,
+a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a throughput of \qty{200}{\hertz}.
 To represent external interference, another table $T_O$ was created with $N=2$, $R=2$, $W=2$
-and bandwidth such that it would saturate the machines configured bandwidth.
+and throughput such that it would saturate the machines configured throughput.
 To stress the system, two extra instances of \texttt{ktb} were executed on machines $A$ and $M$, both targeting $T_O$.
 The reported data was collected from machine $H$'s \texttt{ktb} instance targeting $T_T$.
 

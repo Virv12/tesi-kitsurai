@@ -9,7 +9,7 @@ uninterpreted arrays of bytes.
 A Rustikai system operates on a \emph{cluster} composed of a static (see
 Section~\ref{subsec:limitations}) set of nodes; a \emph{node} corresponds to a
 server that usually runs on a dedicated physical machine.
-%% 1) we need having NO other services potentially stealing disk bandwidth
+%% 1) we need having NO other services potentially stealing disk throughput
 %% 2) if we mention virtualization, we open a Pandora box about how storage virtualization is configured, what are the performance implications, how is disk sync()ing mapped to the virtualization layer, etc... (see -drive cache= in kvm)
 Each node may be temporarily unavailable due to failures or network partitions,
 and the system is designed to be resilient to such events and to continue operating
@@ -22,8 +22,8 @@ Section~\ref{subsec:availability-zones}).
 
 Each table is characterized by four parameters specified by the user at creation time:
 \begin{itemize}
-    \item \texttt{bandwidth} or $B$: the overall bandwidth, expressed as requests per second, to be granted
-        to clients accessing the table (see Section~\ref{subsec:bandwidth-model}).
+    \item \texttt{throughput} or $B$: the overall throughput, expressed as requests per second, to be granted
+        to clients accessing the table (see Section~\ref{subsec:throughput-model}).
     \item $N$: the replication factor for each key-value pair.
     \item \texttt{read\_concern} or $R$: the minimum number of nodes that must
         successfully respond to a read request (see Section~\ref{subsec:consistency}).
@@ -39,8 +39,8 @@ The system computes automatically the following parameters:
     \item \texttt{responsible\_nodes}: a list of $M$ nodes, possibly
         heterogeneous, on which the table's key-value pairs are distributed,
         chosen to guarantee replication and data availability.
-    \item $s_i$: the bandwidth (requests per second) allocated for the table on each node $i$,
-      where the total bandwidth $S = \sum s_i$ satisfies the constraint
+    \item $s_i$: the throughput (requests per second) allocated for the table on each node $i$,
+      where the total throughput $S = \sum s_i$ satisfies the constraint
       $S = B \cdot N$.
 \end{itemize}
 
@@ -117,7 +117,7 @@ Each node regulates admission against its locally allocated share $s_i$ of a
 table's budget, preventing co-located workloads from interfering and ensuring
 that no single table can monopolize local resources.
 
-The regulator is rate-based and converges to the configured average rate on
+The regulator is throughput-based and converges to the configured average throughput on
 each node, while permitting a short, bounded burst of \qty{100}{\milli\second}
 to absorb micro-bursts.
 Over longer intervals, the admitted throughput per node is bounded to $s_i$,
@@ -130,8 +130,8 @@ This \emph{per-node, per-table} throttling improves scalability: admission
 control is fully decentralized, avoids single-node bottlenecks, and naturally
 scales with cluster size as additional nodes contribute independent capacity.
 
-\subsection{Bandwidth Allocation Model}
-\label{subsec:bandwidth-model}
+\subsection{Throughput Allocation Model}
+\label{subsec:throughput-model}
 
 Rustikai adopts a conservative, request-per-second based admission policy.
 At table creation, the allocator assumes that \emph{all} requests issued by the
@@ -165,11 +165,11 @@ forward the request to the appropriate nodes.
 \begin{itemize}
     \item \textbf{\texttt{table-create}}: The client provides four parameters:
         $B$, $N$, $R$, and $W$.
-        The system allocates sufficient bandwidth across the nodes to satisfy
+        The system allocates sufficient throughput across the nodes to satisfy
         the requested configuration, creates the table, and returns the
         generated \texttt{id} of the new table.
         If the requested parameters cannot be satisfied, for instance due to
-        insufficient available bandwidth or an insufficient number of AZs to
+        insufficient available throughput or an insufficient number of AZs to
         meet the desired replication factor, the operation fails and an error
         is returned.
 

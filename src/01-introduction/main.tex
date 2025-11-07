@@ -39,7 +39,7 @@ compression and execution techniques that exploit columnar layouts to minimize I
 The Rustikai project is presented as a first attempt to create a key-value store that is not only scalable and resilient,
 but also introduces explicit resource control mechanisms to guarantee a minimum throughput to each tenant, even under heavy load conditions.
 
-It achieves these results by leveraging a bandwidth allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
+It achieves these results by leveraging a throughput allocation mechanism and key distribution algorithm, with configurable replication, read concern and write concern per table.
 The resulting system is designed to work without the need for replica coordination, making it resilient to faults and network partitions.
 
 The project is implemented in Rust, a language chosen not only for its excellent performance but also for the memory safety model it provides.

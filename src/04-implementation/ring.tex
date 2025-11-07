@@ -7,8 +7,8 @@ while satisfying the following requirements:
 \begin{enumerate}
     \item Each key is replicated on $N$ nodes, each from a distinct AZ.
     \item $\mathbb{E}[w_i] \leq s_i$ for each node $i$, where $w_i$ is the
-        workload on node $i$ and $s_i$ is the bandwidth allocated by that node
-        for the table, both measured in requests per second.
+        workload on node $i$ and $s_i$ is the throughput allocated by that node
+        for the table, both measured in requests per second (\unit{\rps}).
 \end{enumerate}
 
 The expected workload on the $i$-th node is
@@ -16,7 +16,7 @@ The expected workload on the $i$-th node is
     \mathbb{E}[w_i] = \sum_{k \in K_i} p_k \cdot B
 \]
 where $K_i$ is the set of keys assigned to node $i$, $p_k$ is the
-probability that key $k$ is requested and $B$ is the total bandwidth of the
+probability that key $k$ is requested and $B$ is the total throughput of the
 table, in requests per second.
 
 An extreme request distribution prevents scaling: if some key $k$ has $p_k = 1$
@@ -44,7 +44,7 @@ AZ, we have $\sum_{i : \mathrm{az}(i) = z} |K_i| \leq |K|$, hence
 \]
 and $s_i \leq B$ for each node $i$.
 
-Define $S = \sum s_i$, the total bandwidth allocated for the table across all
+Define $S = \sum s_i$, the total throughput allocated for the table across all
 nodes.
 By summing the second requirement over all nodes, we obtain $\frac{1}{|K|} \sum
 |K_i| = \frac{S}{B}$.
@@ -164,7 +164,7 @@ Consider a table with parameters
     B = 4,\quad
     S = B \cdot N = 12,
 \]
-and five nodes, each in a distinct AZ ($az(i) = i$), with allocated bandwidth
+and five nodes, each in a distinct AZ ($az(i) = i$), with allocated throughput
 \[
     s_0 = 4,\; s_1 = 3,\; s_2 = 2,\; s_3 = 1,\; s_4 = 2.
 \]
@@ -226,7 +226,7 @@ if $p = 2$ then the key is assigned to nodes $2$, $0$, and $1$
 \subsubsection{Implicit Construction}
 \label{subsubsec:implicit-construction}
 
-Since the allocated bandwidth can be considerably high, constructing the ring
+Since the allocated throughput can be considerably high, constructing the ring
 explicitly may be very expensive.
 To avoid this, we look for an algorithm that directly computes the node
 assigned to a position $p$ in the ring.
@@ -315,7 +315,7 @@ This matches the result of the explicit construction.
 \label{subsubsec:stddev}
 
 The replication ring distributes keys to nodes proportionally to their
-allocated bandwidth, such that the expected workload on each node is within its
+allocated throughput, such that the expected workload on each node is within its
 capacity.
 However, due to the probabilistic nature of key assignment, the actual workload
 may deviate from the expected value.
@@ -362,4 +362,4 @@ bottleneck the entire system, so we can define the cluster-wide slowdown factor 
 \end{equation}
 
 When strict guarantees are required, the client can choose to overbook the
-table's bandwidth to accommodate potential slowdowns.
+table's throughput to accommodate potential slowdowns.

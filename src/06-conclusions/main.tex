@@ -13,8 +13,8 @@ a distributed data store suitable for real-time performance guarantees.
 The experimental results confirm the validity of the approach, as the system:
 \begin{itemize}
     \item maintained controlled performance even under high load and in the presence of noisy clients,
-    ensuring effective isolation between tenants and guaranteeing each a minimum share of bandwidth and an acceptable maximum latency;
-    \item achieved performance gains due to scaling across multiple configurations, remaining within a small variance of the expected rate.
+    ensuring effective isolation between tenants and guaranteeing each a minimum share of throughput and an acceptable maximum latency;
+    \item achieved performance gains due to scaling across multiple configurations, remaining within a small variance of the expected throughput.
 \end{itemize}
 Although testing was conducted on non-enterprise hardware due to resource constraints,
 similar or improved performance is expected on high-end production systems.
@@ -30,8 +30,8 @@ whereas real-world deployments require the ability to dynamically join and leave
 Future work should include the development of a catch-up protocol for reintegrating nodes after outages or cluster membership changes,
 as in Dynamo~\cite{Dynamo2007} and its derivatives.
 
-Similarly, table bandwidth parameters are currently static and cannot be reconfigured at runtime.
-A natural extension would involve dynamic reallocation of table bandwidth and key-space distribution,
+Similarly, table throughput parameters are currently static and cannot be reconfigured at runtime.
+A natural extension would involve dynamic reallocation of table throughput and key-space distribution,
 enabling live adjustment of throughput guarantees.
 Relaxing the uniform key-access assumption would further allow
 an internal auto-scaling mechanism akin to Dynamo's partition-splitting strategy~\cite{Dynamo2007},
@@ -42,8 +42,8 @@ most of the work required to enable TLS consists of exposing the configuration t
 Additional experimentation with HTTP/3~\cite{HTTP3} and QUIC~\cite{QUIC} could further improve latency and connection management.
 
 Future work could also explore more sophisticated capacity management strategies across nodes,
-particularly when tables have unbalanced bandwidth or storage requirements.
-Enhancing the current bandwidth-limiting model to support separate limits for read and write operations
+particularly when tables have unbalanced throughput or storage requirements.
+Enhancing the current throughput-limiting model to support separate limits for read and write operations
 could be beneficial, drawing inspiration from DynamoDB's Read and Write Capacity Units (RCUs and WCUs)~\cite{Dynamo2022, DynamoWhitepaper}
 or X-Stor's Request Units (RUs)~\cite{XStor}.
 
