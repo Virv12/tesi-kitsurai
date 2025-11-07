@@ -65,7 +65,7 @@ client-tunable quorums. We make two deliberate design choices:
 \end{itemize}
 
 \paragraph{Quorum parameters.}
-We use lowercase $N, R, W$ for the number of replicas, read quorum, and write
+We use uppercase $N, R, W$ for the number of replicas, read quorum, and write
 quorum.
 A write to key $k$ is considered \emph{committed} once any $W$ replicas
 acknowledge persisting the value; the system does not subsequently propagate
