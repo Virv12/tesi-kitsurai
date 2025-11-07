@@ -74,9 +74,9 @@ This configuration distributes requests across peers according to each machine's
 In the uniform case each machine receives one third of the requests,
 so the slowest machine becomes the bottleneck.
 Therefore, the overall throughput should be approximately three times the slowest machine's throughput.
-In our setup the slowest machine is $A$, which achieved \qty{4.8}{\kilo\hertz},
-yielding an expected overall throughput of \qty{14.4}{\kilo\hertz}.
-During testing the system reached \qty{13.2}{\kilo\hertz} (\qty{92}{\percent} of expected),
+In our setup the slowest machine is $A$, which achieved \qty{4.8}{\kilo\rps},
+yielding an expected overall throughput of \qty{14.4}{\kilo\rps}.
+During testing the system reached \qty{13.2}{\kilo\rps} (\qty{92}{\percent} of expected),
 producing a delta of \num{2.0328} and a $p$-value of \num{0.0210}.
 This $p$-value gives marginal evidence against the null hypothesis;
 thus the slowdown is likely due to both a slightly imbalanced distribution and additional CPU overhead.
@@ -87,8 +87,8 @@ thus the slowdown is likely due to both a slightly imbalanced distribution and a
 
 In the proportional case, as long as the machine throughput are configured correctly no single machine should become a bottleneck
 and the overall throughput should equal the sum of individual throughputs.
-In our setup, this corresponds to \qty{20.6}{\kilo\hertz},
-while the test measured \qty{17.0}{\kilo\hertz} or \qty{83}{\percent} of the expected value.
+In our setup, this corresponds to \qty{20.6}{\kilo\rps},
+while the test measured \qty{17.0}{\kilo\rps} or \qty{83}{\percent} of the expected value.
 For machines $M$ and $A$ the deltas are \num{3.8663} and the $p$-value is \num{5.5255e-5},
 while for machine $H$ the delta is \num{6.6966} and its $p$-value can be safely approximated with zero.
 These $p$-values allow us to reject the null hypothesis,
@@ -106,7 +106,7 @@ This configuration provides reproducible performance ($N=R=W$) and was preferred
 
 In the uniform replication case each machine receives two thirds of client requests, as the key space is replicated twice,
 so the expected overall throughput is $3/2$ times the slowest machine's throughput.
-The expected overall throughput is \qty{7.2}{\kilo\hertz}, and testing confirms the system achieves \qty{7.2}{\kilo\hertz}.
+The expected overall throughput is \qty{7.2}{\kilo\rps}, and testing confirms the system achieves \qty{7.2}{\kilo\rps}.
 
 % p_1,2,3 = 2/3
 % make_numbers(Fraction(72, 10), Fraction(72, 10), 2/3)
@@ -114,8 +114,8 @@ The expected overall throughput is \qty{7.2}{\kilo\hertz}, and testing confirms 
 
 In the proportional replication case node $H$ holds a full copy while $M$ and $A$ each store half.
 The overall throughput is therefore the minimum of $H$'s throughput and the sum of $M$ and $A$'s rates.
-In our setup $H$ is faster than $M$ and $A$ combined, giving an expected overall throughput of \qty{9.8}{\kilo\hertz}.
-The system achieved \qty{9.4}{\kilo\hertz} or \qty{96}{\percent} of the expected value.
+In our setup $H$ is faster than $M$ and $A$ combined, giving an expected overall throughput of \qty{9.8}{\kilo\rps}.
+The system achieved \qty{9.4}{\kilo\rps} or \qty{96}{\percent} of the expected value.
 For $M$ and $A$ the deltas are \num{1.3457} and the $p$-value is\num{0.0892};
 while for $H$ the delta is not significant because it stores exactly a full copy.
 Here the $p$-values are sufficiently large that we cannot reject the null hypothesis,
@@ -138,7 +138,7 @@ so the observed slowdown is likely due to an imbalanced key distribution.
     \sisetup{table-format = 2.1{\textsuperscript{\emph{A}}}}
     \begin{tabular}{lSSS}
         \toprule
-        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{3}{c}{Throughput (\unit{\kilo\hertz})} \\
+        \multirow{2}{*}{\raisebox{-0.5ex}{Test Case}} & \multicolumn{3}{c}{Throughput (\unit{\kilo\rps})} \\
         \cmidrule{2-4}
         & \texttt{get}~\qty{512}{\byte} & \texttt{get}~\qty{4}{\kilo\byte} & \texttt{set}~\qty{4}{\kilo\byte} \\
         \midrule
@@ -158,14 +158,14 @@ so the observed slowdown is likely due to an imbalanced key distribution.
 \paragraph{Real-Time}
 The last test focused on evaluating the real-time properties of the system, simulating a concrete use case.
 With a proportional throughput configuration matching the measured rates in the self stress,
-a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a throughput of \qty{200}{\hertz}.
+a table $T_T$ was created with $N=3$, $R=3$, $W=3$ and a throughput of \qty{200}{\rps}.
 To represent external interference, another table $T_O$ was created with $N=2$, $R=2$, $W=2$
 and throughput such that it would saturate the machines configured throughput.
 To stress the system, two extra instances of \texttt{ktb} were executed on machines $A$ and $M$, both targeting $T_O$.
 The reported data was collected from machine $H$'s \texttt{ktb} instance targeting $T_T$.
 
-The system successfully isolated the target table $T_T$ from the outside noise, maintaining the allocated throughput of \qty{200}{\hertz}.
-Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than \qty{200}{\hertz},
+The system successfully isolated the target table $T_T$ from the outside noise, maintaining the allocated throughput of \qty{200}{\rps}.
+Reported in Table~\ref{tab:results-isolation} are the measured latencies when the target table received less than \qty{200}{\rps},
 both with and without external stress.
 Overall, a slight increase in latency was observed, which is expected, as no explicit latency control mechanism is implemented.
 
@@ -186,7 +186,3 @@ Overall, a slight increase in latency was observed, which is expected, as no exp
         \bottomrule
     \end{tabular}
 \end{table}
-
-% TODO: Una sezione che spiega due cose in piu` ci potrebbe stare, viene anche decentemente lunga.
-%\subsection{Key Distribution Error}
-%\label{subsec:key-distribution-error}
