@@ -68,8 +68,9 @@ client-tunable quorums. We make two deliberate design choices:
 We use uppercase $N, R, W$ for the number of replicas, read quorum, and write
 quorum.
 A write to key $k$ is considered \emph{committed} once any $W$ replicas
-acknowledge persisting the value; the system does not subsequently propagate
-that value to the remaining $N - W$ replicas.
+acknowledge persisting the value, out of the $N$ nodes the write is forwarded to;
+the system does not perform any subsequent action to ensure the remaining $N - W$ replicas
+have been updated reflecting the write.
 A read for key $k$ completes once responses from any $R$ replicas are received.
 
 \paragraph{Quorum intersection.}
